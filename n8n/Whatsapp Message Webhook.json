@@ -1,0 +1,2455 @@
+{
+  "name": "Whatsapp Message Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "239618de-841b-4724-b2f6-2dcc9e131694",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        16,
+        144
+      ],
+      "id": "fac953e4-3c53-46a8-b4e1-56b81320c958",
+      "name": "Webhook",
+      "webhookId": "239618de-841b-4724-b2f6-2dcc9e131694"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "qr",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "a684b8b6-96cd-45f4-8829-707e840c161c"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "QR"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "aaaf5a14-208e-4446-9f1f-8c95131274a6",
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "message_create",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "New Message"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        672,
+        144
+      ],
+      "id": "0d98f182-ebcd-4aa5-8007-ae5b8dbbe738",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "url": "=https://wa.indieapps.id/session/qr/{{ $json.session_id }}/image",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1568,
+        -176
+      ],
+      "id": "1fc7d9fe-c922-47ff-95d6-d776f6fce150",
+      "name": "Get QR"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $('Get Contact').item.json.account_id }}/conversations/{{ $('Get Contact').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Env').item.json.chatwoot_bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ \n  $if(\n    $('Format Input').item.json.from.includes(\"@g.us\"),\n    \"**\" + $('Format Input').item.json.name + \":**\\n\\n\" + $('Call \\'Get Mention Name\\'').item.json.message,\n    $('Call \\'Get Mention Name\\'').item.json.message\n  )\n}}"
+            },
+            {
+              "name": "message_type",
+              "value": "incoming"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            },
+            {
+              "name": "content_attributes.in_reply_to",
+              "value": "={{ $('Get row(s)').item.json.chatwoot_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2240,
+        304
+      ],
+      "id": "13cd20d7-c2ad-47cf-81b8-efbfb53c45dc",
+      "name": "Send Message",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "pcSfoxHugNyKjFx8",
+          "mode": "list",
+          "cachedResultName": "Chat",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/pcSfoxHugNyKjFx8"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "whatsapp_id",
+              "keyValue": "={{ $if($json.is_from_me, $json.to, $json.from) }}"
+            },
+            {
+              "keyName": "session_id",
+              "keyValue": "={{ $json.session_id }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        896,
+        336
+      ],
+      "id": "daae3bb0-02c9-4b85-afee-f21b6a78caa1",
+      "name": "Get Contact",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b3086c19-cf7a-4fba-a027-53b201a3a770",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "d47ad218-0a6f-417d-ae8a-8f2cb3654f49",
+              "leftValue": "={{ $json.conversation_id }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        336
+      ],
+      "id": "44207102-db4f-44a1-b757-0bfb6ae407ca",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "pcSfoxHugNyKjFx8",
+          "mode": "list",
+          "cachedResultName": "Chat",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/pcSfoxHugNyKjFx8"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "whatsapp_id",
+              "keyValue": "=+62111111"
+            },
+            {
+              "keyName": "session_id",
+              "keyValue": "={{ $('Webhook').item.json.body.sessionId }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        144
+      ],
+      "id": "618bb2e8-08a3-4d6b-aa28-84e90fa205f0",
+      "name": "Get Admin Contact",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wa.indieapps.id/client/getContactLidAndPhone/{{ $json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"userIds\": [\n    \"{{ $('Format Input').item.json.from }}\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1776,
+        160
+      ],
+      "id": "07af245d-597f-4def-8fd0-08c6616e52d1",
+      "name": "Get Formated Number"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0763cdd4-73f7-48c7-a42d-b6c798e32ed1",
+              "name": "phone",
+              "value": "=+{{ $json.data[0].pn.replaceAll(\"@c.us\", \"\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2016,
+        160
+      ],
+      "id": "d7cd35a5-b76d-4e09-9e86-a51135e21488",
+      "name": "Get Phone"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $('Get Admin Contact').item.json.account_id }}/contacts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Env').item.json.chatwoot_user_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $if($('Get Group Information').isExecuted, $('Get Group Information').item.json.chat.name + \" (GROUP)\", $('Format Input').item.json.name) }}"
+            },
+            {
+              "name": "phone_number",
+              "value": "={{ $if($('Get Phone').isExecuted, $('Get Phone').item.json.phone, null) }}"
+            },
+            {
+              "name": "identifier",
+              "value": "={{ $('Format Input').item.json.from }}"
+            },
+            {
+              "name": "avatar_url",
+              "value": "={{ $json.result }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2896,
+        -64
+      ],
+      "id": "013da675-143a-4026-a1e9-9bc6c1ed4c68",
+      "name": "Save Contact"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wa.indieapps.id/client/getProfilePicUrl/{{ $('Format Input').item.json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "contactId",
+              "value": "={{ $('Format Input').item.json.from }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2464,
+        16
+      ],
+      "id": "2bba54db-d0ff-433c-b13e-b4472a805356",
+      "name": "Get Profile Pic Url"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "pcSfoxHugNyKjFx8",
+          "mode": "list",
+          "cachedResultName": "Chat",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/pcSfoxHugNyKjFx8"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "keyValue": "={{ $('Get Admin Contact').item.json.session_id }}"
+            },
+            {
+              "keyName": "whatsapp_id",
+              "keyValue": "={{ $('Format Input').item.json.from }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "whatsapp_id": "={{ $('Format Input').item.json.from }}",
+            "account_id": "={{ $('Get Admin Contact').item.json.account_id }}",
+            "inbox_id": "={{ $('Get Admin Contact').item.json.inbox_id }}",
+            "conversation_id": "={{ $json.id }}",
+            "session_id": "={{ $('Get Admin Contact').item.json.session_id }}",
+            "contact_id": "={{ $json.meta.sender.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "inbox_id",
+              "displayName": "inbox_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        3344,
+        16
+      ],
+      "id": "2e059513-f006-440c-8be2-ef360d231b36",
+      "name": "Save Cache Contact",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $('Get Admin Contact').item.json.account_id }}/conversations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Env').item.json.chatwoot_user_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inbox_id\": {{ $('Get Admin Contact').item.json.inbox_id }},\n  \"contact_id\": {{ $json.payload.contact.id }},\n  \"status\": \"pending\",\n  \"message\": {\n    \"content\": \"{{ \n  $if(\n    $json.payload.contact.identifier.includes(\"@g.us\"),\n    \"**\" + $('Format Input').item.json.name + \":**\\n\\n\" + $('Format Input').item.json.message,\n    $('Format Input').item.json.message\n  )\n}}\",\n    \"message_type\": \"incoming\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3120,
+        16
+      ],
+      "id": "b5d86d62-2ddd-4536-bde8-e1b6ff66193f",
+      "name": "Create Conversation"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "pcSfoxHugNyKjFx8",
+          "mode": "list",
+          "cachedResultName": "Chat",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/pcSfoxHugNyKjFx8"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "keyValue": "={{ $json.session_id }}"
+            },
+            {
+              "keyName": "whatsapp_id",
+              "keyValue": "+62111111"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        896,
+        -160
+      ],
+      "id": "4bd1e8a1-f1fd-4e8b-91e5-a290e59e26c4",
+      "name": "Get Chat Admin"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TkyyuSgwJ0wv9ynW",
+          "mode": "list",
+          "cachedResultName": "Session",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/TkyyuSgwJ0wv9ynW"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "keyValue": "={{ $json.session_id }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        -160
+      ],
+      "id": "6746aa09-74cf-42db-b539-291a613e55a6",
+      "name": "Get Session"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eacdae5d-2efc-4552-bbab-fd0414ed4a6a",
+              "leftValue": "={{ $json.qr }}",
+              "rightValue": "={{ $('Webhook').item.json.body.data.qr }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        -160
+      ],
+      "id": "4a9cbf50-52da-4f0a-93f1-50296bc0e74b",
+      "name": "Check is QR difference"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TkyyuSgwJ0wv9ynW",
+          "mode": "list",
+          "cachedResultName": "Session",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/TkyyuSgwJ0wv9ynW"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "keyValue": "={{ $('Get Session').item.json.session_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "qr": "={{ $('Webhook').item.json.body.data.qr }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "qr",
+              "displayName": "qr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "state",
+              "displayName": "state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "is_contact_sync",
+              "displayName": "is_contact_sync",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "bot_token",
+              "displayName": "bot_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "user_token",
+              "displayName": "user_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        -176
+      ],
+      "id": "33d17f26-69cf-4dc4-a46d-88d5cc3e8e3c",
+      "name": "Upsert row(s)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "710f6d76-1927-4306-b575-b960ffc09b9e",
+              "leftValue": "={{ $('Format Input').item.json.is_from_me }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        448
+      ],
+      "id": "6ec8186a-4783-4e4c-8847-485eb20f912d",
+      "name": "Is Not From Me"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Format Input').item.json.type }}",
+                    "rightValue": "chat",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "42b6f5d8-67d6-4c17-88f6-040873e0bb9c"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "chat"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4f072cab-7d38-4525-8dad-609e691de28b",
+                    "leftValue": "={{ $('Format Input').item.json.type }}",
+                    "rightValue": "=image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2227430d-5f2d-4991-a1be-292ef7b13bb6",
+                    "leftValue": "={{ $('Format Input').item.json.type }}",
+                    "rightValue": "document",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "document"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        2016,
+        416
+      ],
+      "id": "58922681-f3bb-4cd5-a08d-695fe05b4256",
+      "name": "Message Type"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $('Get Chat Admin').item.json.account_id }}/conversations/{{ $('Get Chat Admin').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Env').item.json.chatwoot_bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "attachments[]",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "message_type",
+              "value": "incoming"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1792,
+        -176
+      ],
+      "id": "4e5dd0e7-e425-4510-b193-a85e81ef24a3",
+      "name": "Send QR"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wa.indieapps.id/message/downloadMediaAsData/{{ $('Get Contact').item.json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chatId",
+              "value": "={{ $('Get Contact').item.json.whatsapp_id }}"
+            },
+            {
+              "name": "messageId",
+              "value": "={{ $('Format Input').item.json.message_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2240,
+        592
+      ],
+      "id": "c212c62e-1508-4ce0-8c1a-25277eddf71b",
+      "name": "Get Media"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8ef5009e-e389-486a-a150-1cc3ad672063",
+              "leftValue": "={{ $('Format Input').item.json.caption }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2464,
+        592
+      ],
+      "id": "36bcd1fc-47cb-449b-afce-291a40c6ad83",
+      "name": "Is Contain Caption"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $('Get Contact').item.json.account_id }}/conversations/{{ $('Get Contact').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Env').item.json.chatwoot_bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "attachments[]",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "message_type",
+              "value": "incoming"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            },
+            {
+              "name": "content_attributes",
+              "value": "={\"in_reply_to\":{{ $('Get row(s)').item.json.chatwoot_id }}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2688,
+        688
+      ],
+      "id": "e978968c-6ebd-42a9-ad9c-1122e8b93373",
+      "name": "Send Image",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $('Get Contact').item.json.account_id }}/conversations/{{ $('Get Contact').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Env').item.json.chatwoot_bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "attachments[]",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "message_type",
+              "value": "incoming"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            },
+            {
+              "name": "content",
+              "value": "={{ \n  $if(\n    $('Format Input').item.json.from.includes(\"@g.us\"),\n    \"**\" + $('Format Input').item.json.name + \":**\\n\\n\" + $('Call \\'Get Mention Name\\'').item.json.message,\n    $('Call \\'Get Mention Name\\'').item.json.message\n  )\n}}"
+            },
+            {
+              "name": "content_attributes",
+              "value": "={\"in_reply_to\":{{ $('Get row(s)').item.json.chatwoot_id }}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2688,
+        496
+      ],
+      "id": "b39d14db-7892-4989-83ed-75dfd6c5c80d",
+      "name": "Send Image With Caption",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "fK5YrmeDnGDRK42c",
+          "mode": "list",
+          "cachedResultName": "Message",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/fK5YrmeDnGDRK42c"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chatwoot_id": "={{ $json.id }}",
+            "whatsapp_id": "={{ $('Format Input').item.json.message_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chatwoot_id",
+              "displayName": "chatwoot_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        2912,
+        288
+      ],
+      "id": "12bf4e84-7ae1-4522-9a9f-ccb406bb620b",
+      "name": "Insert Mapping"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "fK5YrmeDnGDRK42c",
+          "mode": "list",
+          "cachedResultName": "Message",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/fK5YrmeDnGDRK42c"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "whatsapp_id",
+              "keyValue": "={{ $('Format Input').item.json.reply_message_id }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1776,
+        432
+      ],
+      "id": "88457e23-742a-4462-981b-53c0a97ff2f9",
+      "name": "Get row(s)",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e0c34477-6379-46dd-8903-b986176e2842",
+              "leftValue": "={{ $('Format Input').item.json.from }}",
+              "rightValue": "@g.us",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1552,
+        144
+      ],
+      "id": "81209b81-7ba6-41c9-888b-ab9818b349f1",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wa.indieapps.id/groupChat/getClassInfo/{{ $json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('Format Input').item.json.from }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1776,
+        0
+      ],
+      "id": "cac09ef2-7e09-42f9-b76f-5a420a44340b",
+      "name": "Get Group Information"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2240,
+        16
+      ],
+      "id": "16b62aa2-c183-4d71-8b7f-daf71944f9a5",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "sQbSBY87tGECrJAx",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/sQbSBY87tGECrJAx",
+          "cachedResultName": "Get Mention Name"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "message": "={{ $('Format Input').item.json.message }}",
+            "mentioned_ids": "={{ $('Format Input').item.json.mentioned_ids }}",
+            "session_id": "={{ $json.session_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mentioned_ids",
+              "displayName": "mentioned_ids",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1552,
+        432
+      ],
+      "id": "c222384c-fb35-4ab4-b993-cfb2c5cf23d4",
+      "name": "Call 'Get Mention Name'"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3e8c5800-070c-4135-91b1-f0d6511fbb5e",
+              "name": "event",
+              "value": "={{ $('Webhook').item.json.body.dataType }}",
+              "type": "string"
+            },
+            {
+              "id": "e09fbdde-5f52-4c19-9b78-b130295e47d8",
+              "name": "is_from_me",
+              "value": "={{ $('Webhook').item.json.body.data.message._data.id.fromMe }}",
+              "type": "boolean"
+            },
+            {
+              "id": "148a3ebb-022c-4749-8c46-ba5f134fa3fe",
+              "name": "from",
+              "value": "={{ $('Webhook').item.json.body.data.message._data.from }}",
+              "type": "string"
+            },
+            {
+              "id": "a1667082-8f1f-40eb-b98f-3efee87c6327",
+              "name": "name",
+              "value": "={{ $('Webhook').item.json.body.data.message._data.notifyName }}",
+              "type": "string"
+            },
+            {
+              "id": "c7b01da5-2e47-44be-b224-d58f712a2d7e",
+              "name": "to",
+              "value": "={{ $('Webhook').item.json.body.data.message._data.to }}",
+              "type": "string"
+            },
+            {
+              "id": "bd381de2-e3b0-4d05-8920-44d90c0e45b8",
+              "name": "message",
+              "value": "={{ $if($('Webhook').item.json.body.data.message._data.type != \"chat\", $('Webhook').item.json.body.data.message._data.caption,$('Webhook').item.json.body.data.message._data.body) }}",
+              "type": "string"
+            },
+            {
+              "id": "98b57cd5-1b37-422f-91b0-c1e529539b20",
+              "name": "session_id",
+              "value": "={{ $('Webhook').item.json.body.sessionId }}",
+              "type": "string"
+            },
+            {
+              "id": "168ba3a9-369f-4d50-bf75-7dd00f5c19d3",
+              "name": "type",
+              "value": "={{ $('Webhook').item.json.body.data.message._data.type }}",
+              "type": "string"
+            },
+            {
+              "id": "4cc96b15-e66e-421d-b773-aabf1949d5b7",
+              "name": "caption",
+              "value": "={{ $('Webhook').item.json.body.data.message._data.caption }}",
+              "type": "string"
+            },
+            {
+              "id": "d1053009-de99-4ddf-b04d-6221876690c3",
+              "name": "message_id",
+              "value": "={{ $('Webhook').item.json.body.data.message._data.id.id }}",
+              "type": "string"
+            },
+            {
+              "id": "5d634ec2-fe7a-4a50-946c-4a60b8a313c8",
+              "name": "reply_message_id",
+              "value": "={{ $('Webhook').item.json.body.data.message._data.quotedStanzaID }}",
+              "type": "string"
+            },
+            {
+              "id": "178532b1-1373-4503-95fd-051d034fbbc1",
+              "name": "mentioned_ids",
+              "value": "={{ $('Webhook').item.json.body.data.message.mentionedIds }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        144
+      ],
+      "id": "929ffdd9-1894-4673-86d2-c87f89d69200",
+      "name": "Format Input"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0d05bb3c-38ad-468a-bd9b-66d6e812728a",
+              "name": "chatwoot_bot_token",
+              "value": "5fzcZ5wXYrrNaA6wwTE6fEM3",
+              "type": "string"
+            },
+            {
+              "id": "c18b2561-e586-4cd6-94c0-37180ef7e9bb",
+              "name": "chatwoot_user_token",
+              "value": "FQGuJWyGTFWfFrNjiNo9GHEt",
+              "type": "string"
+            },
+            {
+              "id": "7952517f-76ea-41c4-bf1e-f887e1ec12e9",
+              "name": "whatsapp_token",
+              "value": "vgzlOYf9HKA70FgA1yyrseftRdVFPdLOA7XZFUObC3NIITf3BzHlDH3s7VmllahS",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        144
+      ],
+      "id": "699b302d-c0f4-44ac-89f5-3a0eb477f0c3",
+      "name": "Env"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "AbsIPXMzxfDgLT4F",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/AbsIPXMzxfDgLT4F",
+          "cachedResultName": "Search Not Found Account / Chat"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "account_id": "={{ $('Get Contact').item.json.account_id }}",
+            "conversation_id": "={{ $('Get Contact').item.json.conversation_id }}",
+            "chatwoot_user_token": "={{ $('Env').item.json.chatwoot_user_token }}",
+            "contact_id": "={{ $('Get Contact').item.json.contact_id }}",
+            "session_id": "={{ $('Get Contact').item.json.session_id }}",
+            "webhook_body": "={{ $('Webhook').item.json.body.toJsonString() }}",
+            "webhook_url": "={{ $('Webhook').item.json.webhookUrl }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "chatwoot_user_token",
+              "displayName": "chatwoot_user_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "webhook_url",
+              "displayName": "webhook_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "webhook_body",
+              "displayName": "webhook_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        3136,
+        320
+      ],
+      "id": "e4455175-7835-4301-be92-857402256fa7",
+      "name": "Get Not Found Resource"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a1a129c1-ec2b-4d9c-b385-1ce0822223c5",
+              "leftValue": "={{ $('Get Contact').item.json.id }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2672,
+        16
+      ],
+      "id": "8f894537-6b6e-495c-930f-95cba3460dc9",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6d434a0b-a370-4723-958f-7522c4ebe9e1",
+              "name": "payload.contact.id",
+              "value": "={{ $('Get Contact').item.json.contact_id }}",
+              "type": "number"
+            },
+            {
+              "id": "3e06bc53-f680-4d5d-b3fa-88d6272940a0",
+              "name": "payload.contact.identifier",
+              "value": "={{ $('Get Contact').item.json.whatsapp_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2896,
+        112
+      ],
+      "id": "613bf9bd-6253-4b47-bdd7-c1ac7617e4c0",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {
+    "Get Group Information": [
+      {
+        "json": {
+          "success": true,
+          "chat": {
+            "groupMetadata": {
+              "id": {
+                "server": "g.us",
+                "user": "120363405567137069",
+                "_serialized": "120363405567137069@g.us"
+              },
+              "creation": 1764442870,
+              "owner": {
+                "server": "lid",
+                "user": "146918080536781",
+                "_serialized": "146918080536781@lid"
+              },
+              "subject": "Test Group",
+              "subjectTime": 1764442870,
+              "restrict": false,
+              "announce": false,
+              "noFrequentlyForwarded": false,
+              "membershipApprovalMode": false,
+              "size": 3,
+              "support": false,
+              "suspended": false,
+              "terminated": false,
+              "uniqueShortNameMap": {},
+              "isLidAddressingMode": true,
+              "isParentGroup": false,
+              "isParentGroupClosed": false,
+              "defaultSubgroup": false,
+              "generalSubgroup": false,
+              "hiddenSubgroup": false,
+              "groupSafetyCheck": false,
+              "groupAdder": {
+                "server": "lid",
+                "user": "146918080536781",
+                "_serialized": "146918080536781@lid"
+              },
+              "generalChatAutoAddDisabled": false,
+              "allowNonAdminSubGroupCreation": false,
+              "incognito": false,
+              "hasCapi": false,
+              "participants": [
+                {
+                  "id": {
+                    "server": "c.us",
+                    "user": "6285155225323",
+                    "_serialized": "6285155225323@c.us"
+                  },
+                  "isAdmin": true,
+                  "isSuperAdmin": true
+                },
+                {
+                  "id": {
+                    "server": "c.us",
+                    "user": "6281119141245",
+                    "_serialized": "6281119141245@c.us"
+                  },
+                  "isAdmin": false,
+                  "isSuperAdmin": false
+                },
+                {
+                  "id": {
+                    "server": "c.us",
+                    "user": "6285121245673",
+                    "_serialized": "6285121245673@c.us"
+                  },
+                  "isAdmin": false,
+                  "isSuperAdmin": false
+                }
+              ],
+              "pendingParticipants": [],
+              "pastParticipants": [],
+              "membershipApprovalRequests": [],
+              "subgroupSuggestions": []
+            },
+            "id": {
+              "server": "g.us",
+              "user": "120363405567137069",
+              "_serialized": "120363405567137069@g.us"
+            },
+            "name": "Test Group",
+            "isGroup": true,
+            "isReadOnly": false,
+            "unreadCount": 0,
+            "timestamp": 1764490964,
+            "pinned": false,
+            "isMuted": false,
+            "muteExpiration": 0,
+            "lastMessage": {
+              "_data": {
+                "id": {
+                  "fromMe": false,
+                  "remote": "120363405567137069@g.us",
+                  "id": "28860967201764490964",
+                  "participant": {
+                    "server": "lid",
+                    "user": "146918080536781",
+                    "_serialized": "146918080536781@lid"
+                  },
+                  "_serialized": "false_120363405567137069@g.us_28860967201764490964_146918080536781@lid"
+                },
+                "viewed": false,
+                "body": "Test Group",
+                "type": "gp2",
+                "subtype": "subject",
+                "t": 1764490964,
+                "from": {
+                  "server": "g.us",
+                  "user": "120363405567137069",
+                  "_serialized": "120363405567137069@g.us"
+                },
+                "to": {
+                  "server": "c.us",
+                  "user": "6285121245673",
+                  "_serialized": "6285121245673@c.us"
+                },
+                "author": {
+                  "server": "lid",
+                  "user": "146918080536781",
+                  "_serialized": "146918080536781@lid"
+                },
+                "isNewMsg": true,
+                "star": false,
+                "kicNotified": false,
+                "recvFresh": true,
+                "isFromTemplate": false,
+                "isAdsMedia": false,
+                "pollInvalidated": false,
+                "isSentCagPollCreation": false,
+                "latestEditMsgKey": null,
+                "latestEditSenderTimestampMs": null,
+                "recipients": [],
+                "mentionedJidList": [],
+                "groupMentions": [],
+                "isEventCanceled": false,
+                "eventInvalidated": false,
+                "isVcardOverMmsDocument": false,
+                "isForwarded": false,
+                "isQuestion": false,
+                "questionReplyQuotedMessage": null,
+                "questionResponsesCount": 0,
+                "readQuestionResponsesCount": 0,
+                "labels": [],
+                "hasReaction": false,
+                "viewMode": "VISIBLE",
+                "productHeaderImageRejected": false,
+                "lastPlaybackProgress": 0,
+                "isDynamicReplyButtonsMsg": false,
+                "isCarouselCard": false,
+                "parentMsgId": null,
+                "callSilenceReason": null,
+                "isVideoCall": false,
+                "callDuration": null,
+                "callCreator": null,
+                "callParticipants": null,
+                "isCallLink": null,
+                "callLinkToken": null,
+                "isMdHistoryMsg": false,
+                "stickerSentTs": 0,
+                "isAvatar": false,
+                "lastUpdateFromServerTs": 0,
+                "invokedBotWid": null,
+                "bizBotType": null,
+                "botResponseTargetId": null,
+                "botPluginType": null,
+                "botPluginReferenceIndex": null,
+                "botPluginSearchProvider": null,
+                "botPluginSearchUrl": null,
+                "botPluginSearchQuery": null,
+                "botPluginMaybeParent": false,
+                "botReelPluginThumbnailCdnUrl": null,
+                "botMessageDisclaimerText": null,
+                "botMsgBodyType": null,
+                "requiresDirectConnection": false,
+                "bizContentPlaceholderType": null,
+                "hostedBizEncStateMismatch": false,
+                "senderOrRecipientAccountTypeHosted": false,
+                "placeholderCreatedWhenAccountIsHosted": false,
+                "groupHistoryBundleMessageKey": null,
+                "groupHistoryBundleMetadata": null,
+                "nonJidMentions": null,
+                "links": []
+              },
+              "id": {
+                "fromMe": false,
+                "remote": "120363405567137069@g.us",
+                "id": "28860967201764490964",
+                "participant": {
+                  "server": "lid",
+                  "user": "146918080536781",
+                  "_serialized": "146918080536781@lid"
+                },
+                "_serialized": "false_120363405567137069@g.us_28860967201764490964_146918080536781@lid"
+              },
+              "hasMedia": false,
+              "body": "Test Group",
+              "type": "gp2",
+              "timestamp": 1764490964,
+              "from": "120363405567137069@g.us",
+              "to": "6285121245673@c.us",
+              "author": "146918080536781@lid",
+              "deviceType": "web",
+              "isForwarded": false,
+              "forwardingScore": 0,
+              "isStatus": false,
+              "isStarred": false,
+              "fromMe": false,
+              "hasQuotedMsg": false,
+              "hasReaction": false,
+              "vCards": [],
+              "mentionedIds": [],
+              "groupMentions": [],
+              "isGif": false,
+              "links": []
+            }
+          }
+        }
+      }
+    ],
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "automation.indieapps.id",
+            "x-forwarded-scheme": "https",
+            "x-forwarded-proto": "https",
+            "x-forwarded-for": "172.70.188.67",
+            "x-real-ip": "172.70.188.67",
+            "connection": "Keep-Alive",
+            "content-length": "3136",
+            "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7",
+            "accept-encoding": "gzip, br",
+            "user-agent": "axios/1.12.0",
+            "cf-ray": "9bbdbde4680d6c05-SIN",
+            "content-type": "application/json",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "104.234.174.101",
+            "cf-ipcountry": "SG",
+            "cf-visitor": "{\"scheme\":\"https\"}"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "dataType": "message_create",
+            "data": {
+              "message": {
+                "_data": {
+                  "id": {
+                    "fromMe": false,
+                    "remote": "146918080536781@lid",
+                    "id": "3B0C7A2ED40EA4DC7B61",
+                    "_serialized": "false_146918080536781@lid_3B0C7A2ED40EA4DC7B61"
+                  },
+                  "viewed": false,
+                  "body": "Halo",
+                  "type": "chat",
+                  "t": 1768064542,
+                  "clientReceivedTsMillis": 1768064541816,
+                  "notifyName": "Hari Nugroho",
+                  "from": "146918080536781@lid",
+                  "to": "6285121245673@c.us",
+                  "ack": 1,
+                  "invis": false,
+                  "isNewMsg": true,
+                  "star": false,
+                  "kicNotified": false,
+                  "recvFresh": true,
+                  "isFromTemplate": false,
+                  "isAdsMedia": false,
+                  "pollInvalidated": false,
+                  "isSentCagPollCreation": false,
+                  "latestEditMsgKey": null,
+                  "latestEditSenderTimestampMs": null,
+                  "mentionedJidList": [],
+                  "groupMentions": [],
+                  "isEventCanceled": false,
+                  "eventInvalidated": false,
+                  "isVcardOverMmsDocument": false,
+                  "isForwarded": false,
+                  "isQuestion": false,
+                  "questionReplyQuotedMessage": null,
+                  "questionResponsesCount": 0,
+                  "readQuestionResponsesCount": 0,
+                  "forwardsCount": 0,
+                  "labels": [],
+                  "hasReaction": false,
+                  "viewMode": "VISIBLE",
+                  "messageSecret": {
+                    "0": 89,
+                    "1": 134,
+                    "2": 24,
+                    "3": 74,
+                    "4": 252,
+                    "5": 229,
+                    "6": 161,
+                    "7": 84,
+                    "8": 131,
+                    "9": 37,
+                    "10": 192,
+                    "11": 55,
+                    "12": 177,
+                    "13": 101,
+                    "14": 107,
+                    "15": 113,
+                    "16": 16,
+                    "17": 245,
+                    "18": 21,
+                    "19": 10,
+                    "20": 185,
+                    "21": 220,
+                    "22": 177,
+                    "23": 96,
+                    "24": 155,
+                    "25": 82,
+                    "26": 91,
+                    "27": 66,
+                    "28": 140,
+                    "29": 234,
+                    "30": 242,
+                    "31": 105
+                  },
+                  "productHeaderImageRejected": false,
+                  "lastPlaybackProgress": 0,
+                  "isDynamicReplyButtonsMsg": false,
+                  "isCarouselCard": false,
+                  "parentMsgId": null,
+                  "callSilenceReason": null,
+                  "isVideoCall": false,
+                  "callDuration": null,
+                  "callCreator": null,
+                  "callParticipants": null,
+                  "isCallLink": null,
+                  "callLinkToken": null,
+                  "isMdHistoryMsg": false,
+                  "stickerSentTs": 0,
+                  "isAvatar": false,
+                  "lastUpdateFromServerTs": 0,
+                  "invokedBotWid": null,
+                  "bizBotType": null,
+                  "botResponseTargetId": null,
+                  "botPluginType": null,
+                  "botPluginReferenceIndex": null,
+                  "botPluginSearchProvider": null,
+                  "botPluginSearchUrl": null,
+                  "botPluginSearchQuery": null,
+                  "botPluginMaybeParent": false,
+                  "botReelPluginThumbnailCdnUrl": null,
+                  "botMessageDisclaimerText": null,
+                  "botMsgBodyType": null,
+                  "reportingTokenInfo": {
+                    "reportingToken": {
+                      "0": 44,
+                      "1": 204,
+                      "2": 218,
+                      "3": 83,
+                      "4": 176,
+                      "5": 80,
+                      "6": 210,
+                      "7": 248,
+                      "8": 9,
+                      "9": 158,
+                      "10": 143,
+                      "11": 192,
+                      "12": 114,
+                      "13": 162,
+                      "14": 4,
+                      "15": 251
+                    },
+                    "version": 2,
+                    "reportingTag": {
+                      "0": 1,
+                      "1": 14,
+                      "2": 233,
+                      "3": 241,
+                      "4": 51,
+                      "5": 99,
+                      "6": 251,
+                      "7": 73,
+                      "8": 69,
+                      "9": 31,
+                      "10": 136,
+                      "11": 163,
+                      "12": 13,
+                      "13": 243,
+                      "14": 110,
+                      "15": 183,
+                      "16": 116,
+                      "17": 174,
+                      "18": 19,
+                      "19": 7
+                    }
+                  },
+                  "requiresDirectConnection": null,
+                  "bizContentPlaceholderType": null,
+                  "hostedBizEncStateMismatch": false,
+                  "senderOrRecipientAccountTypeHosted": false,
+                  "placeholderCreatedWhenAccountIsHosted": false,
+                  "groupHistoryBundleMessageKey": null,
+                  "groupHistoryBundleMetadata": null,
+                  "groupHistoryIndividualMessageInfo": null,
+                  "nonJidMentions": null,
+                  "links": []
+                },
+                "id": {
+                  "fromMe": false,
+                  "remote": "146918080536781@lid",
+                  "id": "3B0C7A2ED40EA4DC7B61",
+                  "_serialized": "false_146918080536781@lid_3B0C7A2ED40EA4DC7B61"
+                },
+                "ack": 1,
+                "hasMedia": false,
+                "body": "Halo",
+                "type": "chat",
+                "timestamp": 1768064542,
+                "from": "146918080536781@lid",
+                "to": "6285121245673@c.us",
+                "deviceType": "web",
+                "isForwarded": false,
+                "forwardingScore": 0,
+                "isStatus": false,
+                "isStarred": false,
+                "fromMe": false,
+                "hasQuotedMsg": false,
+                "hasReaction": false,
+                "vCards": [],
+                "mentionedIds": [],
+                "groupMentions": [],
+                "isGif": false,
+                "links": []
+              }
+            },
+            "sessionId": "chatwoot-1-9"
+          },
+          "webhookUrl": "automation.indieapps.id/webhook/239618de-841b-4724-b2f6-2dcc9e131694",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Env",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Get Chat Admin",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get QR": {
+      "main": [
+        [
+          {
+            "node": "Send QR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Contact": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get Admin Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Not From Me",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Admin Contact": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Formated Number": {
+      "main": [
+        [
+          {
+            "node": "Get Phone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Phone": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Profile Pic Url": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Contact": {
+      "main": [
+        [
+          {
+            "node": "Create Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Conversation": {
+      "main": [
+        [
+          {
+            "node": "Save Cache Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Chat Admin": {
+      "main": [
+        [
+          {
+            "node": "Get Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Session": {
+      "main": [
+        [
+          {
+            "node": "Check is QR difference",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check is QR difference": {
+      "main": [
+        [
+          {
+            "node": "Get QR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Not From Me": {
+      "main": [
+        [
+          {
+            "node": "Call 'Get Mention Name'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Message Type": {
+      "main": [
+        [
+          {
+            "node": "Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Media",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send QR": {
+      "main": [
+        [
+          {
+            "node": "Upsert row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Media": {
+      "main": [
+        [
+          {
+            "node": "Is Contain Caption",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Contain Caption": {
+      "main": [
+        [
+          {
+            "node": "Send Image With Caption",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Message": {
+      "main": [
+        [
+          {
+            "node": "Insert Mapping",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Not Found Resource",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Image With Caption": {
+      "main": [
+        [
+          {
+            "node": "Insert Mapping",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Not Found Resource",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Image": {
+      "main": [
+        [
+          {
+            "node": "Insert Mapping",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Not Found Resource",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "Message Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Get Group Information",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Formated Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Group Information": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Get Profile Pic Url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Get Mention Name'": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Input": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Env": {
+      "main": [
+        [
+          {
+            "node": "Format Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Save Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Create Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "IjeFMO4KdUScevQ7"
+  },
+  "versionId": "74b25353-a78b-40cd-9a0f-38a429f6c882",
+  "meta": {
+    "instanceId": "b63fb4e47613e2c4abac724b32f0ca3af9a157bf8c5cd4a80c5c9724602aaf1b"
+  },
+  "id": "SnJmWFitA0UeDAx0",
+  "tags": []
+}

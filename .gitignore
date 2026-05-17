@@ -1,0 +1,33 @@
+# Binaries and packaging
+chatbridge
+chatbridge_test
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, greenlight, etc.
+*.test
+*.out
+
+# Go dependency directories
+vendor/
+
+# Environment files (containing credentials and secrets)
+.env
+.env.local
+.env.*.local
+
+# Session and state directories (dynamic WhatsApp sessions)
+sessions/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store

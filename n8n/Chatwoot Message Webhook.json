@@ -1,0 +1,2027 @@
+{
+  "name": "Chatwoot Message Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chatwoot",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        96,
+        -416
+      ],
+      "id": "498fe917-6018-442d-8176-263ca2429d9d",
+      "name": "Webhook",
+      "webhookId": "744ec970-8931-40f5-a838-7c1bfc9fd763"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "conversation.messages",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        -256
+      ],
+      "id": "5f1a1527-c0e8-4c3f-b803-771a436a489c",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ $('Webhook').item.json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        752,
+        -416
+      ],
+      "id": "73c321b1-5496-47e2-b2ea-02e6169822e3",
+      "name": "Get Body"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b75032dd-08b5-4c91-83de-6082be2cb2e6",
+              "name": "account_id",
+              "value": "={{ $json.account.id }}",
+              "type": "number"
+            },
+            {
+              "id": "d440bbf8-20b7-426d-b29b-77175e789b9f",
+              "name": "inbox_id",
+              "value": "={{ $json.conversation.inbox_id }}",
+              "type": "number"
+            },
+            {
+              "id": "c764a067-a946-4466-b6b9-c6239cb22fa6",
+              "name": "conversation_id",
+              "value": "={{ $json.conversation.id }}",
+              "type": "number"
+            },
+            {
+              "id": "d2efea8a-e5bc-439d-bfd7-fa384c119901",
+              "name": "contact_id",
+              "value": "={{ $json.conversation.contact_inbox.contact_id }}",
+              "type": "number"
+            },
+            {
+              "id": "52117444-92cc-4a19-9ac9-8126cd957134",
+              "name": "session_id",
+              "value": "=chatwoot-{{ $json.account.id }}-{{ $json.conversation.inbox_id }}",
+              "type": "string"
+            },
+            {
+              "id": "6799da52-e0ea-41a3-b023-4958672c6f06",
+              "name": "phone_number",
+              "value": "={{ $json.conversation.meta.sender.phone_number }}",
+              "type": "string"
+            },
+            {
+              "id": "2315f4f4-a5d6-44a7-bdae-c05a9550cf32",
+              "name": "event",
+              "value": "={{ $json.event }}",
+              "type": "string"
+            },
+            {
+              "id": "2d31506e-33f6-44c2-8470-b92a761ae613",
+              "name": "message",
+              "value": "={{ $json['conversation.messages'].processed_message_content }}",
+              "type": "string"
+            },
+            {
+              "id": "2d1575a7-ec2f-4fd4-af53-214c53953a56",
+              "name": "message_id",
+              "value": "={{ $json['conversation.messages'].id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1632,
+        -240
+      ],
+      "id": "3e82505a-3350-4d23-836d-9e78152c3403",
+      "name": "Extract Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "263ebb87-129e-4de4-8693-56a98250f401",
+              "leftValue": "={{ $json.phone_number }}",
+              "rightValue": "+62111111",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1856,
+        -240
+      ],
+      "id": "004356db-b4b6-43c5-a019-685d05b866d9",
+      "name": "Is System Message"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message }}",
+                    "rightValue": "init",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "7469b432-2965-4b5b-9a19-5fb0b0a9f1e6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "init"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a44bae28-11e4-4210-95c8-224bbba8831f",
+                    "leftValue": "={{ $json.message }}",
+                    "rightValue": "ss",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ss"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ee3a49bd-bc53-4899-a818-4523a86f5dbf",
+                    "leftValue": "={{ $json.message }}",
+                    "rightValue": "stop",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "stop"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        2128,
+        -576
+      ],
+      "id": "64426016-878e-4b8d-9f60-41d3e6182d31",
+      "name": "Message"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3712d2fa-24b2-43db-b540-e2166819ee10",
+              "name": "message",
+              "value": "={{ $json.error.message.split(\" - \")[1].slice(1, -1).replaceAll(\"\\\\\", \"\") }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2576,
+        -832
+      ],
+      "id": "e0106428-5648-4c08-af5a-829b46e40ff5",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $('Message').item.json.account_id }}/conversations/{{ $('Message').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Env').item.json.chatwoot_bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $('Create Session').item.json.message }}"
+            },
+            {
+              "name": "message_type",
+              "value": "incoming"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2800,
+        -1120
+      ],
+      "id": "23460176-b8fa-4de7-ace9-a5299d654b35",
+      "name": "Send Success Message"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $('Message').item.json.account_id }}/conversations/{{ $('Message').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Env').item.json.chatwoot_bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $json.message.error }}"
+            },
+            {
+              "name": "message_type",
+              "value": "incoming"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2800,
+        -928
+      ],
+      "id": "841818bb-1245-4b59-a4c1-42d79f445994",
+      "name": "Send Error Message"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e9ce857d-0568-422f-94cd-d57010b30414",
+              "leftValue": "={{ $json.message.error }}",
+              "rightValue": "Session already exists",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2800,
+        -736
+      ],
+      "id": "823ab95b-d85e-4075-a1aa-4d97914c7b2e",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "url": "=http://wa.indieapps.id/session/start/{{ $json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2352,
+        -1024
+      ],
+      "id": "3a79c627-0205-4bf6-9d3c-0244909cb174",
+      "name": "Create Session",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "=http://wa.indieapps.id/session/status/{{ $('Extract Data').item.json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3024,
+        -752
+      ],
+      "id": "d762f4c9-68e5-45a5-b403-6762ed03ba75",
+      "name": "Check Session Status"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message }}",
+                    "rightValue": "session_not_connected",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "d817f703-2781-4dcc-8b5d-0ca056a22de5"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        3248,
+        -752
+      ],
+      "id": "6bef9a25-b62c-4b84-9f9e-21c6526ae828",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "conversation_typing_on",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "9c2e0581-7838-4c5c-a1e2-07d52d2c083d"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Start Typing"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1bac6e57-7d85-44be-a298-d367b5fabf21",
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "conversation_typing_off",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Stop Typing"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "63d00e88-b068-4f80-86c3-090e7b87bc90",
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "message_created",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Message Created"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        976,
+        -432
+      ],
+      "id": "56f198c0-fd53-47f4-a4ad-751258d46065",
+      "name": "Event"
+    },
+    {
+      "parameters": {
+        "url": "=https://wa.indieapps.id/session/getPageScreenshot/{{ $json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2352,
+        -640
+      ],
+      "id": "b8f898f0-2a12-4b4f-9565-e31b762765b7",
+      "name": "Get Screen Shoot"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $json.account_id }}/conversations/{{ $json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Env').item.json.chatwoot_bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "attachments[]",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "message_type",
+              "value": "incoming"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2576,
+        -640
+      ],
+      "id": "7d35446b-f120-4c4c-a1e6-a82387dc118b",
+      "name": "Send SS"
+    },
+    {
+      "parameters": {
+        "url": "=https://wa.indieapps.id/session/stop/{{ $json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2352,
+        -448
+      ],
+      "id": "dc12a3eb-d9ab-45fa-9cbc-0f395726bc33",
+      "name": "Stop Session"
+    },
+    {
+      "parameters": {
+        "url": "=https://wa.indieapps.id/session/terminate/{{ $('Message').item.json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2576,
+        -448
+      ],
+      "id": "5716b907-29a3-48c9-a368-d0f1bdc325a0",
+      "name": "Terminate Session"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wa.indieapps.id/chat/sendStateTyping/{{ $('Get Chat').item.json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chatId",
+              "value": "={{ $('Get Chat').item.json.whatsapp_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1440,
+        -576
+      ],
+      "id": "f4456466-c9e5-4d2d-bdb0-8f0983cf6929",
+      "name": "Start Typing"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wa.indieapps.id/client/sendMessage/{{ $json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chatId",
+              "value": "={{ $('Get Chat').item.json.whatsapp_id }}"
+            },
+            {
+              "name": "contentType",
+              "value": "string"
+            },
+            {
+              "name": "content",
+              "value": "={{ $('Extract Data').item.json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2352,
+        48
+      ],
+      "id": "3f1df0cf-a4c2-478d-9155-310a276183d4",
+      "name": "Send Message"
+    },
+    {
+      "parameters": {
+        "content": "Init value\n```init-<user token>-<bot token>```",
+        "height": 80,
+        "width": 272
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        320,
+        -224
+      ],
+      "typeVersion": 1,
+      "id": "69423eda-b0f9-456f-b8ae-0050fa4cde2c",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6aa70d7d-a932-4194-8ec4-4d20cd83d77c",
+              "name": "bot_token",
+              "value": "={{ $('Message').item.json.message.split(\"-\")[2] }}",
+              "type": "string"
+            },
+            {
+              "id": "64b75cd5-2c22-4b7f-8512-9c08f8fad560",
+              "name": "user_token",
+              "value": "={{ $('Message').item.json.message.split(\"-\")[1] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2576,
+        -1312
+      ],
+      "id": "d6fbf26c-86c2-477b-bf65-a3c39ea6b318",
+      "name": "Split Init Param"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "pcSfoxHugNyKjFx8",
+          "mode": "list",
+          "cachedResultName": "Chat",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/pcSfoxHugNyKjFx8"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "whatsapp_id",
+              "keyValue": "={{ $('Message').item.json.phone_number }}"
+            },
+            {
+              "keyName": "session_id",
+              "keyValue": "={{ $('Message').item.json.session_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "account_id": "={{ $('Message').item.json.account_id }}",
+            "inbox_id": "={{ $('Message').item.json.inbox_id }}",
+            "conversation_id": "={{ $('Message').item.json.conversation_id }}",
+            "contact_id": "={{ $('Message').item.json.contact_id }}",
+            "session_id": "={{ $('Message').item.json.session_id }}",
+            "whatsapp_id": "={{ $('Message').item.json.phone_number }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "inbox_id",
+              "displayName": "inbox_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        2800,
+        -1312
+      ],
+      "id": "a961d3fa-1dd3-4d22-9d85-9b9cafbdb6ef",
+      "name": "Upsert Chat"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "TkyyuSgwJ0wv9ynW",
+          "mode": "list",
+          "cachedResultName": "Session",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/TkyyuSgwJ0wv9ynW"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "keyValue": "={{ $('Message').item.json.session_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "bot_token": "={{ $json.bot_token }}",
+            "user_token": "={{ $json.user_token }}",
+            "session_id": "={{ $('Message').item.json.session_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "qr",
+              "displayName": "qr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "state",
+              "displayName": "state",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "is_contact_sync",
+              "displayName": "is_contact_sync",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "bot_token",
+              "displayName": "bot_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "user_token",
+              "displayName": "user_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        2800,
+        -1504
+      ],
+      "id": "76fb43ec-9e7f-46a7-802a-2964ae9be956",
+      "name": "Upsert Session"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wa.indieapps.id/chat/clearState/{{ $('Get Chat').item.json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chatId",
+              "value": "={{ $('Get Chat').item.json.whatsapp_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1440,
+        -432
+      ],
+      "id": "1054931c-3ded-439a-96ca-39e2512eaa52",
+      "name": "Stop Typing"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $('Message').item.json.account_id }}/conversations/{{ $('Message').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Env').item.json.chatwoot_bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "=Stop Session Success"
+            },
+            {
+              "name": "message_type",
+              "value": "incoming"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2800,
+        -448
+      ],
+      "id": "4822897e-3daa-4185-9448-1af3cd0d2114",
+      "name": "Send Stop Message"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "pcSfoxHugNyKjFx8",
+          "mode": "list",
+          "cachedResultName": "Chat",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/pcSfoxHugNyKjFx8"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "conversation_id",
+              "keyValue": "={{ $('Webhook').item.json.body.conversation.id }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        544,
+        -416
+      ],
+      "id": "3310ccab-7bf0-489b-b2ec-0536b80d7079",
+      "name": "Get Chat",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b560f713-6b8f-490d-ae23-619a9a9e7195",
+              "leftValue": "={{ $json.conversation.meta.sender.phone_number }}",
+              "rightValue": "+62111111",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1216,
+        -560
+      ],
+      "id": "492e9fcd-eb83-486c-8792-61d6682aecbc",
+      "name": "If not Admin"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b560f713-6b8f-490d-ae23-619a9a9e7195",
+              "leftValue": "={{ $json.conversation.meta.sender.phone_number }}",
+              "rightValue": "+62111111",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1216,
+        -416
+      ],
+      "id": "f9d4740d-c7ef-4ac6-8ce4-5ce2cbd32e6d",
+      "name": "If not Admin1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "44a6602f-c08f-4e14-969a-d5f4270e6005",
+              "leftValue": "={{ $('Webhook').item.json.body.message_type }}",
+              "rightValue": "incoming",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1424,
+        -256
+      ],
+      "id": "2ef67bac-bfba-4a10-a5bd-a6ed534a96e9",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "fK5YrmeDnGDRK42c",
+          "mode": "list",
+          "cachedResultName": "Message",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/fK5YrmeDnGDRK42c"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chatwoot_id": "={{ $('Extract Data').item.json.message_id }}",
+            "whatsapp_id": "={{ $json.message._data.id.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chatwoot_id",
+              "displayName": "chatwoot_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        48
+      ],
+      "id": "586ed421-5db8-4f47-9106-a62804ead5a7",
+      "name": "Insert Mapping"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wa.indieapps.id/client/sendMessage/{{ $('Get Chat').item.json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Env').item.json.whatsapp_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chatId",
+              "value": "={{ $('Get Chat').item.json.whatsapp_id }}"
+            },
+            {
+              "name": "contentType",
+              "value": "MessageMediaFromURL"
+            },
+            {
+              "name": "content",
+              "value": "={{ $json.data_url }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2768,
+        -112
+      ],
+      "id": "6c207dea-903a-4ba9-9c67-7be9af01cbdf",
+      "name": "Send Attachment"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "attachments",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        -112
+      ],
+      "id": "6710342f-2ffd-4bc3-aaf2-cbf0e84eba12",
+      "name": "Split Attachment"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "403ef7a9-ff59-458d-a095-72761359e045",
+              "name": "attachments",
+              "value": "={{ $('Webhook').item.json.body.attachments }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2352,
+        -112
+      ],
+      "id": "f1364c1e-c394-47e3-bfb1-62c187b69a50",
+      "name": "Get Attachment"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $('Message').item.json.account_id }}/conversations/{{ $('Message').item.json.conversation_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $('Env').item.json.chatwoot_bot_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "=Try this helpful command:\n- init-<user token>-<bot token>: for initalize bot \n- ss: for get screenshoot\n- stop: for stop bot connection"
+            },
+            {
+              "name": "message_type",
+              "value": "incoming"
+            },
+            {
+              "name": "private",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2352,
+        -256
+      ],
+      "id": "0a4f95a1-bcec-47e0-843b-3c6ff6c6e8bf",
+      "name": "Send Help Message"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0d05bb3c-38ad-468a-bd9b-66d6e812728a",
+              "name": "chatwoot_bot_token",
+              "value": "5fzcZ5wXYrrNaA6wwTE6fEM3",
+              "type": "string"
+            },
+            {
+              "id": "c18b2561-e586-4cd6-94c0-37180ef7e9bb",
+              "name": "chatwoot_user_token",
+              "value": "FQGuJWyGTFWfFrNjiNo9GHEt",
+              "type": "string"
+            },
+            {
+              "id": "7952517f-76ea-41c4-bf1e-f887e1ec12e9",
+              "name": "whatsapp_token",
+              "value": "vgzlOYf9HKA70FgA1yyrseftRdVFPdLOA7XZFUObC3NIITf3BzHlDH3s7VmllahS",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        320,
+        -416
+      ],
+      "id": "44019ee2-286a-4ca0-9e3b-e8df63261846",
+      "name": "Env"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4c6cda9b-b03f-4825-99a8-92764087ccf3",
+              "leftValue": "={{ $('Webhook').item.json.body.attachments }}",
+              "rightValue": "={{ $('Webhook').item.json.body.attachments }}",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2144,
+        -96
+      ],
+      "id": "cacd8b16-37b2-4a68-b09f-9b96865a5e93",
+      "name": "Is Has Attachment"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8f34aef9-0645-4c0a-bf43-f57c9acb4b82",
+              "leftValue": "={{ $('Extract Data').item.json.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2144,
+        64
+      ],
+      "id": "e65bc418-b745-42a5-b3f4-7eeca8d03ab3",
+      "name": "Is Has Message"
+    }
+  ],
+  "pinData": {
+    "Create Session": [
+      {
+        "json": {
+          "success": true,
+          "message": "Session initiated successfully"
+        }
+      }
+    ],
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "automation.indieapps.id",
+            "x-forwarded-scheme": "https",
+            "x-forwarded-proto": "https",
+            "x-forwarded-for": "172.69.166.62",
+            "x-real-ip": "172.69.166.62",
+            "connection": "Keep-Alive",
+            "content-length": "2785",
+            "accept": "application/json",
+            "accept-encoding": "gzip, br",
+            "content-type": "application/json",
+            "cf-ray": "9bb45284fbc50d23-SIN",
+            "user-agent": "rest-client/2.1.0 (linux-musl x86_64) ruby/3.4.4p34",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "104.234.174.101",
+            "cf-ipcountry": "SG",
+            "cf-visitor": "{\"scheme\":\"https\"}"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "account": {
+              "id": 1,
+              "name": "Indieapps"
+            },
+            "additional_attributes": {},
+            "content_attributes": {},
+            "content_type": "text",
+            "content": "Halo",
+            "conversation": {
+              "additional_attributes": {},
+              "can_reply": true,
+              "channel": "Channel::Api",
+              "contact_inbox": {
+                "id": 492,
+                "contact_id": 367,
+                "inbox_id": 9,
+                "source_id": "0f7d7ee7-9448-4a78-a914-a5c787a2b6ae",
+                "created_at": "2025-11-27T08:11:03.436Z",
+                "updated_at": "2025-11-27T08:11:03.436Z",
+                "hmac_verified": false,
+                "pubsub_token": "LHAULQxh9rm4uDZEbfPvwL9o"
+              },
+              "id": 137,
+              "inbox_id": 9,
+              "messages": [
+                {
+                  "id": 19671,
+                  "content": "Halo",
+                  "account_id": 1,
+                  "inbox_id": 9,
+                  "conversation_id": 137,
+                  "message_type": 1,
+                  "created_at": 1767965773,
+                  "updated_at": "2026-01-09T13:36:13.389Z",
+                  "private": false,
+                  "status": "sent",
+                  "source_id": null,
+                  "content_type": "text",
+                  "content_attributes": {},
+                  "sender_type": "User",
+                  "sender_id": 1,
+                  "external_source_ids": {},
+                  "additional_attributes": {},
+                  "processed_message_content": "Halo",
+                  "sentiment": {},
+                  "conversation": {
+                    "assignee_id": 1,
+                    "unread_count": 0,
+                    "last_activity_at": 1767965773,
+                    "contact_inbox": {
+                      "source_id": "0f7d7ee7-9448-4a78-a914-a5c787a2b6ae"
+                    }
+                  },
+                  "sender": {
+                    "id": 1,
+                    "name": "Hari Nugroho",
+                    "available_name": "Hari Nugroho",
+                    "avatar_url": "",
+                    "type": "user",
+                    "availability_status": null,
+                    "thumbnail": ""
+                  }
+                }
+              ],
+              "labels": [],
+              "meta": {
+                "sender": {
+                  "additional_attributes": {
+                    "avatar_url_hash": "8d3c1b96ee2d72084971b2967e42adfdad131ae290cb55717a05632026c76738",
+                    "last_avatar_sync_at": "2025-11-27T08:11:03Z"
+                  },
+                  "custom_attributes": {},
+                  "email": null,
+                  "id": 367,
+                  "identifier": "146918080536781@lid",
+                  "name": "Hari Nugroho",
+                  "phone_number": "+6285155225323",
+                  "thumbnail": "https://chat.indieapps.id/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaHBBaTRFIiwiZXhwIjpudWxsLCJwdXIiOiJibG9iX2lkIn19--9258a106257b03e7ec2f412d7ac3d0875edbc626/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaDdCem9MWm05eWJXRjBTU0lJYW5CbkJqb0dSVlE2RTNKbGMybDZaVjkwYjE5bWFXeHNXd2RwQWZvdyIsImV4cCI6bnVsbCwicHVyIjoidmFyaWF0aW9uIn19--7c39cb3ecf9bd72e7bda2ba93efc61a81ee249d3/100634959_554806118785775_2260179899397660614_n.jpg",
+                  "blocked": false,
+                  "type": "contact"
+                },
+                "assignee": {
+                  "id": 1,
+                  "name": "Hari Nugroho",
+                  "available_name": "Hari Nugroho",
+                  "avatar_url": "",
+                  "type": "user",
+                  "availability_status": null,
+                  "thumbnail": ""
+                },
+                "assignee_type": "User",
+                "team": null,
+                "hmac_verified": false
+              },
+              "status": "pending",
+              "custom_attributes": {},
+              "snoozed_until": null,
+              "unread_count": 0,
+              "first_reply_created_at": "2025-11-27T08:34:36.211Z",
+              "priority": null,
+              "waiting_since": 0,
+              "agent_last_seen_at": 1767965773,
+              "contact_last_seen_at": 0,
+              "last_activity_at": 1767965773,
+              "timestamp": 1767965773,
+              "created_at": 1764231063,
+              "updated_at": 1767965773.401503
+            },
+            "created_at": "2026-01-09T13:36:13.389Z",
+            "id": 19671,
+            "inbox": {
+              "id": 9,
+              "name": "Aksara"
+            },
+            "message_type": "outgoing",
+            "private": false,
+            "sender": {
+              "id": 1,
+              "name": "Hari Nugroho",
+              "email": "admin@indieapps.id",
+              "type": "user"
+            },
+            "source_id": null,
+            "event": "message_created"
+          },
+          "webhookUrl": "automation.indieapps.id/webhook/chatwoot",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Env",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Body": {
+      "main": [
+        [
+          {
+            "node": "Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Data": {
+      "main": [
+        [
+          {
+            "node": "Is System Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is System Message": {
+      "main": [
+        [
+          {
+            "node": "Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Has Message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Has Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message": {
+      "main": [
+        [
+          {
+            "node": "Create Session",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Screen Shoot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop Session",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Help Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Send Error Message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Success Message": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Check Session Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Session": {
+      "main": [
+        [
+          {
+            "node": "Split Init Param",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Session Status": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event": {
+      "main": [
+        [
+          {
+            "node": "If not Admin",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If not Admin1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Screen Shoot": {
+      "main": [
+        [
+          {
+            "node": "Send SS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stop Session": {
+      "main": [
+        [
+          {
+            "node": "Terminate Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Init Param": {
+      "main": [
+        [
+          {
+            "node": "Upsert Chat",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Success Message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Upsert Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Terminate Session": {
+      "main": [
+        [
+          {
+            "node": "Send Stop Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Chat": {
+      "main": [
+        [
+          {
+            "node": "Get Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If not Admin": {
+      "main": [
+        [
+          {
+            "node": "Start Typing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If not Admin1": {
+      "main": [
+        [
+          {
+            "node": "Stop Typing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Extract Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Message": {
+      "main": [
+        [
+          {
+            "node": "Insert Mapping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Attachment": {
+      "main": [
+        [
+          {
+            "node": "Send Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Attachment": {
+      "main": [
+        [
+          {
+            "node": "Split Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Env": {
+      "main": [
+        [
+          {
+            "node": "Get Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Has Attachment": {
+      "main": [
+        [
+          {
+            "node": "Get Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Has Message": {
+      "main": [
+        [
+          {
+            "node": "Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "e19a2f76-4eb6-4888-a04c-800a23f84824",
+  "meta": {
+    "instanceId": "b63fb4e47613e2c4abac724b32f0ca3af9a157bf8c5cd4a80c5c9724602aaf1b"
+  },
+  "id": "JPtLyIpuNi8cVrj9",
+  "tags": []
+}

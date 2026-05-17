@@ -1,0 +1,8 @@
+# Exclude dynamic and environment files from docker build context
+sessions/
+n8n/
+docker-compose.yml
+docker-compose.*.yml
+.env
+.git/
+.dockerignore

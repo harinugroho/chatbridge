@@ -1,0 +1,647 @@
+{
+  "name": "Get Mention Name",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "message"
+            },
+            {
+              "name": "session_id"
+            },
+            {
+              "name": "mentioned_ids",
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        576
+      ],
+      "id": "ea79aecc-3cba-4879-914a-317c98181d5c",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wa.indieapps.id/client/getContactLidAndPhone/{{ $('When Executed by Another Workflow').item.json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "vgzlOYf9HKA70FgA1yyrseftRdVFPdLOA7XZFUObC3NIITf3BzHlDH3s7VmllahS"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"userIds\": {{ $json.appended_mentioned_ids.toJsonString() }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1616,
+        288
+      ],
+      "id": "648aee6f-55e0-4a31-a9bb-1216c65dfa40",
+      "name": "Get Formated Number"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1840,
+        288
+      ],
+      "id": "419d3970-fe46-47c0-824c-578136ea33ee",
+      "name": "Split Out1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://wa.indieapps.id/contact/getClassInfo/{{ $('When Executed by Another Workflow').item.json.session_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "vgzlOYf9HKA70FgA1yyrseftRdVFPdLOA7XZFUObC3NIITf3BzHlDH3s7VmllahS"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contactId\": \"{{ $json.pn }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2064,
+        288
+      ],
+      "id": "eb2c2752-7dfd-4086-8516-2ccde5d230ed",
+      "name": "Get contact/getClassInfo"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "IIZakfdnVSampEqN",
+          "mode": "list",
+          "cachedResultName": "Contact",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/IIZakfdnVSampEqN"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "whatsapp_id",
+              "keyValue": "={{ $json.contact.id._serialized }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "whatsapp_id": "={{ $json.contact.id._serialized }}",
+            "name": "={{ $json.contact.name }}",
+            "whatsapp_lid": "={{ $('Split Out1').item.json.lid }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "whatsapp_lid",
+              "displayName": "whatsapp_lid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        2288,
+        288
+      ],
+      "id": "ad622d6f-d965-4529-99f6-f40ddd06ff67",
+      "name": "Upsert row(s)"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "IIZakfdnVSampEqN",
+          "mode": "list",
+          "cachedResultName": "Contact",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/IIZakfdnVSampEqN"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "whatsapp_lid",
+              "keyValue": "={{ $json.mentioned_ids }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        496,
+        320
+      ],
+      "id": "3e09ff21-748b-41df-a711-cc8502370013",
+      "name": "Get row(s)"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "mentioned_ids",
+        "include": "selectedOtherFields",
+        "fieldsToInclude": "message",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        272,
+        400
+      ],
+      "id": "d2b3d4a8-64cf-4fc2-aade-5962e4eebd8c",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3a55ecda-081f-40ae-887a-440bf1d1f765",
+              "leftValue": "={{ $json.mentioned_ids }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        48,
+        576
+      ],
+      "id": "e805c55b-af9a-479f-8628-1650015cd696",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d3b33009-2629-407f-a9fe-e4b4d8b73125",
+              "name": "message",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2064,
+        592
+      ],
+      "id": "cae845b0-5a41-49e6-8456-1d5bc10486fa",
+      "name": "Return"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7bf98349-cc6e-43e5-bd44-aa7eedd568f7",
+              "name": "mentioned_ids",
+              "value": "={{ $json.whatsapp_lid }}",
+              "type": "string"
+            },
+            {
+              "id": "a1e78503-ea73-46f9-9434-1dee95978a67",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        320
+      ],
+      "id": "ea432fa4-83bc-4307-b748-edae62a17a33",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "mentioned_ids",
+        "joinMode": "enrichInput2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        944,
+        384
+      ],
+      "id": "1901a4d2-4c6c-436b-a753-b5c1d088ae42",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "699ae37d-e703-4724-a295-0ee80f391428",
+              "leftValue": "={{ $json.name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1168,
+        384
+      ],
+      "id": "b2cfcd1a-a714-424b-a9c9-f2c48b70dfb2",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "aggregation": "append",
+              "field": "mentioned_ids"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        1392,
+        288
+      ],
+      "id": "0fb00fd1-94b5-4afc-a637-afe4ea213e24",
+      "name": "Summarize"
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "aggregation": "append",
+              "field": "contact"
+            }
+          ]
+        },
+        "fieldsToSplitBy": "message",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        1616,
+        480
+      ],
+      "id": "69b404df-ceda-4c45-af15-ac6a2daa464b",
+      "name": "Summarize1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a9ab1f72-0da6-4071-936e-a79a6c4ad531",
+              "name": "contact.mentioned_ids",
+              "value": "={{ $json.mentioned_ids }}",
+              "type": "string"
+            },
+            {
+              "id": "9194ad5d-d52c-4912-8c26-a14a6dfe51a6",
+              "name": "contact.name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "aaf57b19-43ea-43ee-b427-08ccc4291fbf",
+              "name": "message",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1392,
+        480
+      ],
+      "id": "4760b830-026d-4625-a5cb-6c69e5f7b97b",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  for (const contact of item.json.appended_contact) {\n    console.log(item.json.message, contact.mentioned_ids.replaceAll('@lid', ''), contact.name)\n    item.json.message = item.json.message.replaceAll(contact.mentioned_ids.replaceAll('@lid', ''), contact.name)\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        480
+      ],
+      "id": "504d87c4-a8db-4ee5-a8ba-f18f91786ff5",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "message": "Halo @146918080536781",
+          "mentioned_ids": [
+            "146918080536781@lid"
+          ]
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Formated Number": {
+      "main": [
+        [
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "Get contact/getClassInfo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get contact/getClassInfo": {
+      "main": [
+        [
+          {
+            "node": "Upsert row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize": {
+      "main": [
+        [
+          {
+            "node": "Get Formated Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Summarize1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Return",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "7aa44d0d-edcc-4e12-b212-fb28910c8c74",
+  "meta": {
+    "instanceId": "b63fb4e47613e2c4abac724b32f0ca3af9a157bf8c5cd4a80c5c9724602aaf1b"
+  },
+  "id": "sQbSBY87tGECrJAx",
+  "tags": []
+}

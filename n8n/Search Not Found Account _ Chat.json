@@ -1,0 +1,385 @@
+{
+  "name": "Search Not Found Account / Chat",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $json.account_id }}/conversations/{{ $json.conversation_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $json.chatwoot_user_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        784,
+        304
+      ],
+      "id": "a008b15a-e641-461c-a93f-3ea1384ccc6b",
+      "name": "Get Conversation",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "account_id",
+              "type": "number"
+            },
+            {
+              "name": "contact_id",
+              "type": "number"
+            },
+            {
+              "name": "conversation_id",
+              "type": "number"
+            },
+            {
+              "name": "session_id"
+            },
+            {
+              "name": "chatwoot_user_token"
+            },
+            {
+              "name": "webhook_url"
+            },
+            {
+              "name": "webhook_body"
+            }
+          ]
+        }
+      },
+      "id": "a8005d6d-a7f8-4e3c-9901-0282719e8328",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        336,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://chat.indieapps.id/api/v1/accounts/{{ $json.account_id }}/contacts/{{ $json.contact_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api_access_token",
+              "value": "={{ $json.chatwoot_user_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        560,
+        400
+      ],
+      "id": "c37b7dad-82f5-4723-b978-3c63a9397b81",
+      "name": "Get Contact",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "value": "pcSfoxHugNyKjFx8",
+          "mode": "list",
+          "cachedResultName": "Chat",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/pcSfoxHugNyKjFx8"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "contact_id",
+              "keyValue": "={{ $json.contact_id }}"
+            },
+            {
+              "keyName": "session_id",
+              "keyValue": "={{ $json.session_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        784,
+        496
+      ],
+      "id": "7eb1a89c-dac8-436e-97a3-2f3bb72c4f6d",
+      "name": "Delete Contact",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $('When Executed by Another Workflow').item.json.webhook_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('When Executed by Another Workflow').item.json.webhook_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1264,
+        496
+      ],
+      "id": "60cbe425-d229-458a-9e28-33e22544be78",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "pcSfoxHugNyKjFx8",
+          "mode": "list",
+          "cachedResultName": "Chat",
+          "cachedResultUrl": "/projects/z2a4BOaRYWCegNDB/datatables/pcSfoxHugNyKjFx8"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "keyValue": "={{ $('When Executed by Another Workflow').item.json.session_id }}"
+            },
+            {
+              "keyName": "conversation_id",
+              "keyValue": "={{ $('When Executed by Another Workflow').item.json.conversation_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "conversation_id": "={{ null }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "whatsapp_id",
+              "displayName": "whatsapp_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "inbox_id",
+              "displayName": "inbox_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "contact_id",
+              "displayName": "contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        320
+      ],
+      "id": "6649937a-a997-4b05-80cc-d7f6dd633856",
+      "name": "Reset Conversation ID",
+      "alwaysOutputData": false
+    }
+  ],
+  "pinData": {
+    "Delete Contact": [
+      {
+        "json": {
+          "whatsapp_id": "146918080536781@lid",
+          "account_id": 1,
+          "inbox_id": 9,
+          "conversation_id": 146,
+          "contact_id": 454,
+          "session_id": "chatwoot-1-9",
+          "id": 17,
+          "createdAt": "2026-01-10T16:21:07.707Z",
+          "updatedAt": "2026-01-10T16:21:07.707Z"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "account_id": 1,
+          "contact_id": 458,
+          "conversation_id": 150,
+          "session_id": "chatwoot-1-9",
+          "chatwoot_user_token": "FQGuJWyGTFWfFrNjiNo9GHEt",
+          "webhook_url": "automation.indieapps.id/webhook/239618de-841b-4724-b2f6-2dcc9e131694",
+          "webhook_body": "{\"dataType\":\"message_create\",\"data\":{\"message\":{\"_data\":{\"id\":{\"fromMe\":false,\"remote\":\"146918080536781@lid\",\"id\":\"3BB2D9A4F01DF5A791C9\",\"_serialized\":\"false_146918080536781@lid_3BB2D9A4F01DF5A791C9\"},\"viewed\":false,\"body\":\"Halo\",\"type\":\"chat\",\"t\":1768062542,\"clientReceivedTsMillis\":1768062542004,\"notifyName\":\"Hari Nugroho\",\"from\":\"146918080536781@lid\",\"to\":\"6285121245673@c.us\",\"ack\":1,\"invis\":false,\"isNewMsg\":true,\"star\":false,\"kicNotified\":false,\"recvFresh\":true,\"isFromTemplate\":false,\"isAdsMedia\":false,\"pollInvalidated\":false,\"isSentCagPollCreation\":false,\"latestEditMsgKey\":null,\"latestEditSenderTimestampMs\":null,\"mentionedJidList\":[],\"groupMentions\":[],\"isEventCanceled\":false,\"eventInvalidated\":false,\"isVcardOverMmsDocument\":false,\"isForwarded\":false,\"isQuestion\":false,\"questionReplyQuotedMessage\":null,\"questionResponsesCount\":0,\"readQuestionResponsesCount\":0,\"forwardsCount\":0,\"labels\":[],\"hasReaction\":false,\"viewMode\":\"VISIBLE\",\"messageSecret\":{\"0\":71,\"1\":131,\"2\":124,\"3\":214,\"4\":205,\"5\":185,\"6\":2,\"7\":120,\"8\":42,\"9\":198,\"10\":214,\"11\":233,\"12\":86,\"13\":74,\"14\":124,\"15\":144,\"16\":93,\"17\":86,\"18\":172,\"19\":221,\"20\":122,\"21\":214,\"22\":178,\"23\":173,\"24\":81,\"25\":178,\"26\":19,\"27\":81,\"28\":42,\"29\":8,\"30\":4,\"31\":126},\"productHeaderImageRejected\":false,\"lastPlaybackProgress\":0,\"isDynamicReplyButtonsMsg\":false,\"isCarouselCard\":false,\"parentMsgId\":null,\"callSilenceReason\":null,\"isVideoCall\":false,\"callDuration\":null,\"callCreator\":null,\"callParticipants\":null,\"isCallLink\":null,\"callLinkToken\":null,\"isMdHistoryMsg\":false,\"stickerSentTs\":0,\"isAvatar\":false,\"lastUpdateFromServerTs\":0,\"invokedBotWid\":null,\"bizBotType\":null,\"botResponseTargetId\":null,\"botPluginType\":null,\"botPluginReferenceIndex\":null,\"botPluginSearchProvider\":null,\"botPluginSearchUrl\":null,\"botPluginSearchQuery\":null,\"botPluginMaybeParent\":false,\"botReelPluginThumbnailCdnUrl\":null,\"botMessageDisclaimerText\":null,\"botMsgBodyType\":null,\"reportingTokenInfo\":{\"reportingToken\":{\"0\":101,\"1\":115,\"2\":191,\"3\":233,\"4\":120,\"5\":164,\"6\":65,\"7\":183,\"8\":145,\"9\":228,\"10\":15,\"11\":178,\"12\":76,\"13\":186,\"14\":171,\"15\":217},\"version\":2,\"reportingTag\":{\"0\":1,\"1\":14,\"2\":139,\"3\":122,\"4\":16,\"5\":5,\"6\":15,\"7\":36,\"8\":224,\"9\":142,\"10\":110,\"11\":188,\"12\":236,\"13\":33,\"14\":252,\"15\":29,\"16\":115,\"17\":47,\"18\":21,\"19\":218}},\"requiresDirectConnection\":null,\"bizContentPlaceholderType\":null,\"hostedBizEncStateMismatch\":false,\"senderOrRecipientAccountTypeHosted\":false,\"placeholderCreatedWhenAccountIsHosted\":false,\"groupHistoryBundleMessageKey\":null,\"groupHistoryBundleMetadata\":null,\"groupHistoryIndividualMessageInfo\":null,\"nonJidMentions\":null,\"links\":[]},\"id\":{\"fromMe\":false,\"remote\":\"146918080536781@lid\",\"id\":\"3BB2D9A4F01DF5A791C9\",\"_serialized\":\"false_146918080536781@lid_3BB2D9A4F01DF5A791C9\"},\"ack\":1,\"hasMedia\":false,\"body\":\"Halo\",\"type\":\"chat\",\"timestamp\":1768062542,\"from\":\"146918080536781@lid\",\"to\":\"6285121245673@c.us\",\"deviceType\":\"web\",\"isForwarded\":false,\"forwardingScore\":0,\"isStatus\":false,\"isStarred\":false,\"fromMe\":false,\"hasQuotedMsg\":false,\"hasReaction\":false,\"vCards\":[],\"mentionedIds\":[],\"groupMentions\":[],\"isGif\":false,\"links\":[]}},\"sessionId\":\"chatwoot-1-9\"}"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Reset Conversation ID": [
+      {
+        "json": {
+          "whatsapp_id": "146918080536781@lid",
+          "account_id": 1,
+          "inbox_id": 9,
+          "conversation_id": null,
+          "contact_id": 458,
+          "session_id": "chatwoot-1-9",
+          "id": 21,
+          "createdAt": "2026-01-10T16:25:50.949Z",
+          "updatedAt": "2026-01-10T16:32:10.776Z"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Contact": {
+      "main": [
+        [
+          {
+            "node": "Get Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Conversation": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Reset Conversation ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Contact": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset Conversation ID": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "d3982c28-5415-4f88-b1ee-c961ad906873",
+  "meta": {
+    "instanceId": "b63fb4e47613e2c4abac724b32f0ca3af9a157bf8c5cd4a80c5c9724602aaf1b"
+  },
+  "id": "AbsIPXMzxfDgLT4F",
+  "tags": []
+}
