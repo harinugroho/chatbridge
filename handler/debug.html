@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatBridge Live Debug Logs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #151d30;
+            --border-color: #24314f;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            
+            --app-badge-bg: #2d3748;
+            --webhook-badge-bg: #1e3a8a;
+            --api-badge-bg: #064e3b;
+            
+            --transition-speed: 0.2s;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header Styles */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 2.25rem;
+            height: 2.25rem;
+            background: linear-gradient(135deg, var(--primary), #a855f7);
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: white;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .logo-title h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .logo-title p {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .controls-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 2rem;
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--warning);
+            position: relative;
+        }
+
+        .status-dot.connected {
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.disconnected {
+            background-color: var(--danger);
+            box-shadow: 0 0 8px var(--danger);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all var(--transition-speed) ease;
+            gap: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border-color: var(--border-color);
+        }
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: var(--text-secondary);
+        }
+
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+        .btn-danger:hover {
+            background-color: var(--danger);
+            color: white;
+        }
+
+        /* Filter Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 2rem;
+            background-color: rgba(21, 29, 48, 0.5);
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            padding: 0.35rem 0.85rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+            color: var(--text-secondary);
+        }
+
+        .filter-chip:hover {
+            color: var(--text-primary);
+            border-color: var(--text-secondary);
+        }
+
+        .filter-chip.active {
+            background-color: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+        }
+
+        .search-box {
+            position: relative;
+            min-width: 250px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.45rem 1rem 0.45rem 2.25rem;
+            border-radius: 2rem;
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.875rem;
+            outline: none;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            background-color: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        /* Main Content Grid */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.875rem;
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background-color: var(--card-bg);
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--border-color);
+            z-index: 5;
+        }
+
+        tr {
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background-color 0.1s ease;
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        td {
+            padding: 0.65rem 1rem;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        /* Badge Styles */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .badge-app {
+            background-color: rgba(148, 163, 184, 0.1);
+            color: var(--text-secondary);
+        }
+        .badge-webhook {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+        .badge-api {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+        .badge-error {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
+
+        .status-badge {
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+        .status-success {
+            color: var(--success);
+        }
+        .status-fail {
+            color: var(--danger);
+        }
+
+        /* Message column */
+        .col-message {
+            max-width: 500px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-primary);
+        }
+
+        .app-log-text {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            color: #e2e8f0;
+        }
+
+        .timestamp {
+            font-family: 'Fira Code', monospace;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        /* Drawer / Inspector View */
+        .drawer {
+            position: absolute;
+            top: 0;
+            right: -550px;
+            width: 550px;
+            height: 100%;
+            background-color: var(--card-bg);
+            border-left: 1px solid var(--border-color);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .drawer.open {
+            right: 0;
+        }
+
+        .drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .drawer-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .close-drawer-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            transition: background-color var(--transition-speed) ease;
+        }
+
+        .close-drawer-btn:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .drawer-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .detail-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            background-color: rgba(255,255,255,0.02);
+            padding: 1rem;
+            border-radius: 0.375rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .meta-item label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .meta-item span {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .detail-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .detail-block h3 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        .code-block {
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            padding: 1rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.825rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            color: #cbd5e1;
+        }
+
+        /* Overlay */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 15;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+            gap: 1rem;
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            opacity: 0.3;
+        }
+
+        /* Responsive styling */
+        @media (max-width: 768px) {
+            .drawer {
+                width: 100%;
+                right: -100%;
+            }
+            .toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .search-box {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="logo-section">
+            <div class="logo-icon">C</div>
+            <div class="logo-title">
+                <h1>ChatBridge</h1>
+                <p>Live Debug Logging Console</p>
+            </div>
+        </div>
+        <div class="controls-section">
+            <button class="btn btn-secondary" id="scroll-toggle-btn">
+                <span>⏸</span> Pause Scroll
+            </button>
+            <button class="btn btn-danger" id="clear-btn">
+                <span>🗑</span> Clear
+            </button>
+            <div class="status-indicator">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="status-text">Connecting...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Toolbar Filters -->
+    <div class="toolbar">
+        <div class="filter-group" id="filter-chips">
+            <button class="filter-chip active" data-filter="ALL">All Logs</button>
+            <button class="filter-chip" data-filter="WEBHOOK_IN">Webhook In</button>
+            <button class="filter-chip" data-filter="API_OUT">API Out</button>
+            <button class="filter-chip" data-filter="APP">App Log</button>
+            <button class="filter-chip" data-filter="ERRORS">Errors</button>
+        </div>
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" id="search-input" placeholder="Search message, payload, status...">
+        </div>
+    </div>
+
+    <!-- Main Live Table Container -->
+    <div class="main-container">
+        <div class="table-container" id="table-container">
+            <table id="logs-table">
+                <thead>
+                    <tr>
+                        <th style="width: 120px;">Timestamp</th>
+                        <th style="width: 110px;">Type</th>
+                        <th style="width: 80px;">Method</th>
+                        <th>Path / Message</th>
+                        <th style="width: 150px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="logs-tbody">
+                    <!-- Dynamic logs inserted here -->
+                </tbody>
+            </table>
+            <div class="empty-state" id="empty-state">
+                <div class="empty-state-icon">📡</div>
+                <h3>Waiting for incoming logs...</h3>
+                <p>Ensure your server is running and processing webhook or bridge events.</p>
+            </div>
+        </div>
+
+        <!-- Details Slide-out Drawer -->
+        <div class="overlay" id="overlay"></div>
+        <div class="drawer" id="drawer">
+            <div class="drawer-header">
+                <div class="drawer-title" id="drawer-title">Log Inspection</div>
+                <button class="close-drawer-btn" id="close-drawer-btn">&times;</button>
+            </div>
+            <div class="drawer-content">
+                <div class="detail-meta-grid">
+                    <div class="meta-item">
+                        <label>Log Time</label>
+                        <span id="detail-time">N/A</span>
+                    </div>
+                    <div class="meta-item">
+                        <label>Category</label>
+                        <span id="detail-category">N/A</span>
+                    </div>
+                    <div class="meta-item">
+                        <label>Method</label>
+                        <span id="detail-method">N/A</span>
+                    </div>
+                    <div class="meta-item">
+                        <label>Status</label>
+                        <span id="detail-status">N/A</span>
+                    </div>
+                </div>
+                <div class="detail-block">
+                    <h3>Summary / Target</h3>
+                    <div class="code-block" id="detail-summary" style="font-family: inherit; font-size: 0.95rem;">N/A</div>
+                </div>
+                <div class="detail-block" id="detail-payload-section">
+                    <h3>Inspect Details / Payload</h3>
+                    <pre class="code-block" id="detail-payload">N/A</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Log Storage & State
+        let allLogs = [];
+        let activeFilter = 'ALL';
+        let searchQuery = '';
+        let autoScroll = true;
+        let wsConn = null;
+        let reconnectDelay = 1000;
+
+        // Cache DOM
+        const logsTbody = document.getElementById('logs-tbody');
+        const emptyState = document.getElementById('empty-state');
+        const searchInput = document.getElementById('search-input');
+        const filterChips = document.getElementById('filter-chips');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const clearBtn = document.getElementById('clear-btn');
+        const scrollToggleBtn = document.getElementById('scroll-toggle-btn');
+        const tableContainer = document.getElementById('table-container');
+        
+        // Drawer DOM
+        const drawer = document.getElementById('drawer');
+        const overlay = document.getElementById('overlay');
+        const closeDrawerBtn = document.getElementById('close-drawer-btn');
+        const detailTime = document.getElementById('detail-time');
+        const detailCategory = document.getElementById('detail-category');
+        const detailMethod = document.getElementById('detail-method');
+        const detailStatus = document.getElementById('detail-status');
+        const detailSummary = document.getElementById('detail-summary');
+        const detailPayload = document.getElementById('detail-payload');
+
+        // Initial setup
+        function init() {
+            connectWebSocket();
+            setupEventListeners();
+        }
+
+        // WebSockets Connection & Auto-Reconnect
+        function connectWebSocket() {
+            const loc = window.location;
+            let wsUri = "";
+            if (loc.protocol === "https:") {
+                wsUri = "wss:";
+            } else {
+                wsUri = "ws:";
+            }
+            wsUri += "//" + loc.host + loc.pathname + "/ws";
+
+            statusText.textContent = "Connecting...";
+            statusDot.className = "status-dot";
+
+            wsConn = new WebSocket(wsUri);
+
+            wsConn.onopen = function() {
+                console.log("WebSocket connected");
+                statusText.textContent = "Connected";
+                statusDot.className = "status-dot connected";
+                reconnectDelay = 1000; // Reset reconnect timer
+            };
+
+            wsConn.onmessage = function(evt) {
+                try {
+                    const entry = JSON.parse(evt.data);
+                    // Push to stack, capping at 500 logs to preserve memory
+                    if (allLogs.length >= 500) {
+                        allLogs.shift();
+                    }
+                    allLogs.push(entry);
+                    
+                    renderLogs();
+                } catch (e) {
+                    console.error("Failed to parse log message:", e);
+                }
+            };
+
+            wsConn.onclose = function() {
+                console.warn("WebSocket closed. Attempting reconnect...");
+                statusText.textContent = "Disconnected";
+                statusDot.className = "status-dot disconnected";
+                
+                // Exponential backoff reconnect
+                setTimeout(connectWebSocket, reconnectDelay);
+                reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+            };
+
+            wsConn.onerror = function(err) {
+                console.error("WebSocket error:", err);
+                wsConn.close();
+            };
+        }
+
+        // Setup DOM Events
+        function setupEventListeners() {
+            // Filter click handler
+            filterChips.addEventListener('click', (e) => {
+                if (e.target.classList.contains('filter-chip')) {
+                    Array.from(filterChips.children).forEach(c => c.classList.remove('active'));
+                    e.target.classList.add('active');
+                    activeFilter = e.target.getAttribute('data-filter');
+                    renderLogs();
+                }
+            });
+
+            // Search input handler
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value.toLowerCase().trim();
+                renderLogs();
+            });
+
+            // Clear button
+            clearBtn.addEventListener('click', () => {
+                allLogs = [];
+                renderLogs();
+                closeDrawer();
+            });
+
+            // Scroll lock toggle button
+            scrollToggleBtn.addEventListener('click', () => {
+                autoScroll = !autoScroll;
+                if (autoScroll) {
+                    scrollToggleBtn.textContent = "⏸ Pause Scroll";
+                    scrollToggleBtn.classList.remove('btn-secondary');
+                    scrollToggleBtn.classList.add('btn-primary');
+                    scrollToBottom();
+                } else {
+                    scrollToggleBtn.textContent = "▶ Auto Scroll";
+                    scrollToggleBtn.classList.remove('btn-primary');
+                    scrollToggleBtn.classList.add('btn-secondary');
+                }
+            });
+
+            // Close drawer events
+            closeDrawerBtn.addEventListener('click', closeDrawer);
+            overlay.addEventListener('click', closeDrawer);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeDrawer();
+            });
+        }
+
+        // Check if logs match current filters
+        function filterMatch(entry) {
+            // Type filters
+            if (activeFilter === 'ERRORS' && !entry.is_error) return false;
+            if (activeFilter === 'WEBHOOK_IN' && entry.type !== 'WEBHOOK_IN') return false;
+            if (activeFilter === 'API_OUT' && entry.type !== 'API_OUT') return false;
+            if (activeFilter === 'APP' && entry.type !== 'APP') return false;
+
+            // Search queries
+            if (searchQuery) {
+                const searchFields = [
+                    entry.type,
+                    entry.method,
+                    entry.path,
+                    entry.status,
+                    entry.message,
+                    entry.details
+                ].map(v => (v || '').toLowerCase());
+                
+                return searchFields.some(field => field.includes(searchQuery));
+            }
+
+            return true;
+        }
+
+        // Render Logs to Table
+        function renderLogs() {
+            // Clear current list safely
+            logsTbody.replaceChildren();
+
+            const filteredLogs = allLogs.filter(filterMatch);
+
+            if (filteredLogs.length === 0) {
+                emptyState.style.display = 'flex';
+            } else {
+                emptyState.style.display = 'none';
+
+                filteredLogs.forEach(entry => {
+                    const tr = document.createElement('tr');
+                    tr.addEventListener('click', () => openInspector(entry));
+
+                    // Timestamp
+                    const tdTime = document.createElement('td');
+                    tdTime.className = 'timestamp';
+                    // Parse Go RFC3339 timestamp
+                    let d = new Date(entry.timestamp);
+                    tdTime.textContent = isNaN(d.getTime()) ? 'N/A' : d.toLocaleTimeString() + '.' + String(d.getMilliseconds()).padStart(3, '0');
+                    tr.appendChild(tdTime);
+
+                    // Log Category/Type Badge
+                    const tdType = document.createElement('td');
+                    const badge = document.createElement('span');
+                    badge.className = 'badge';
+                    if (entry.is_error) {
+                        badge.className += ' badge-error';
+                        badge.textContent = entry.type === 'APP' ? 'APP ERROR' : entry.type;
+                    } else if (entry.type === 'WEBHOOK_IN') {
+                        badge.className += ' badge-webhook';
+                        badge.textContent = 'Webhook In';
+                    } else if (entry.type === 'API_OUT') {
+                        badge.className += ' badge-api';
+                        badge.textContent = 'API Out';
+                    } else {
+                        badge.className += ' badge-app';
+                        badge.textContent = 'App';
+                    }
+                    tdType.appendChild(badge);
+                    tr.appendChild(tdType);
+
+                    // Method
+                    const tdMethod = document.createElement('td');
+                    if (entry.type !== 'APP') {
+                        const mSpan = document.createElement('span');
+                        mSpan.style.fontWeight = '600';
+                        mSpan.textContent = entry.method || '';
+                        tdMethod.appendChild(mSpan);
+                    } else {
+                        tdMethod.textContent = '-';
+                    }
+                    tr.appendChild(tdMethod);
+
+                    // Path / Message summary
+                    const tdMessage = document.createElement('td');
+                    tdMessage.className = 'col-message';
+                    if (entry.type === 'APP') {
+                        const appText = document.createElement('span');
+                        appText.className = 'app-log-text';
+                        appText.textContent = entry.message;
+                        tdMessage.appendChild(appText);
+                    } else {
+                        tdMessage.textContent = entry.path || entry.message;
+                    }
+                    tr.appendChild(tdMessage);
+
+                    // Status
+                    const tdStatus = document.createElement('td');
+                    const statusSpan = document.createElement('span');
+                    statusSpan.className = 'status-badge ' + (entry.is_error ? 'status-fail' : 'status-success');
+                    statusSpan.textContent = entry.status || (entry.is_error ? 'ERROR' : 'SUCCESS');
+                    tdStatus.appendChild(statusSpan);
+                    tr.appendChild(tdStatus);
+
+                    logsTbody.appendChild(tr);
+                });
+            }
+
+            if (autoScroll) {
+                scrollToBottom();
+            }
+        }
+
+        function scrollToBottom() {
+            tableContainer.scrollTop = tableContainer.scrollHeight;
+        }
+
+        // Open Log Inspector Drawer
+        function openInspector(entry) {
+            // Set details safely using textContent
+            let d = new Date(entry.timestamp);
+            detailTime.textContent = isNaN(d.getTime()) ? 'N/A' : d.toLocaleString() + '.' + String(d.getMilliseconds()).padStart(3, '0');
+            
+            detailCategory.textContent = entry.type;
+            detailMethod.textContent = entry.method || '-';
+            detailStatus.textContent = entry.status || '-';
+            detailStatus.className = entry.is_error ? 'status-fail' : 'status-success';
+            
+            detailSummary.textContent = entry.type === 'APP' ? 'Application Output' : entry.path || entry.message;
+
+            // Formatted JSON representation or raw text
+            detailPayload.textContent = '';
+            
+            // Try to pretty print if details contains JSON
+            try {
+                // If it is already a JSON formatted string, let's parse it and display it formatted
+                const parsed = JSON.parse(entry.details);
+                detailPayload.textContent = JSON.stringify(parsed, null, 2);
+            } catch (e) {
+                // If not valid JSON, display raw details string
+                detailPayload.textContent = entry.details || 'No details available.';
+            }
+
+            // Open drawer
+            drawer.classList.add('open');
+            overlay.classList.add('active');
+        }
+
+        // Close Inspector Drawer
+        function closeDrawer() {
+            drawer.classList.remove('open');
+            overlay.classList.remove('active');
+        }
+
+        // Run
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

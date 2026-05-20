@@ -4,6 +4,7 @@ import (
 	"chatbridge/config"
 	"chatbridge/database"
 	"chatbridge/handler"
+	"chatbridge/logger"
 	"chatbridge/service"
 	"fmt"
 	"log"
@@ -15,6 +16,7 @@ import (
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	logger.InitLogging()
 	log.Println("=== Chatwoot ↔ WhatsApp Bridge ===")
 
 	// Load configuration
@@ -47,6 +49,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/webhook/chatwoot", handler.LoggingMiddleware(chatwootHandler))
 	mux.Handle("/webhook/whatsapp", handler.LoggingMiddleware(whatsappHandler))
+	mux.HandleFunc("/debug", handler.ServeDebugPage)
+	mux.HandleFunc("/debug/ws", handler.ServeWebSocket)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"healthy"}`))

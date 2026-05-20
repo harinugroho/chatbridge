@@ -2,8 +2,8 @@ package handler
 
 import (
 	"bytes"
+	"chatbridge/logger"
 	"io"
-	"log"
 	"net/http"
 	"time"
 )
@@ -50,26 +50,6 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 
 		duration := time.Since(start)
 
-		log.Printf("\n--- [HTTP Webhook Request Received] ---\n"+
-			"Method:      %s\n"+
-			"Path:        %s\n"+
-			"RemoteAddr:  %s\n"+
-			"Headers:     %v\n"+
-			"Payload:\n%s\n"+
-			"--- [HTTP Webhook Response Sent] ---\n"+
-			"Status:      %d %s\n"+
-			"Payload:\n%s\n"+
-			"Duration:    %v\n"+
-			"------------------------------------",
-			r.Method,
-			r.URL.Path,
-			r.RemoteAddr,
-			r.Header,
-			string(reqBody),
-			lrw.statusCode,
-			http.StatusText(lrw.statusCode),
-			string(lrw.body),
-			duration,
-		)
+		logger.LogWebhook(r.Method, r.URL.Path, r.RemoteAddr, r.Header, reqBody, lrw.statusCode, lrw.body, duration)
 	})
 }
