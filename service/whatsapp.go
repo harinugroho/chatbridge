@@ -23,7 +23,7 @@ func NewWhatsAppClient(baseURL, apiKey string) *WhatsAppClient {
 		BaseURL: baseURL,
 		APIKey:  apiKey,
 		client: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 120 * time.Second,
 			Transport: &LoggingRoundTripper{
 				Proxied: http.DefaultTransport,
 				Name:    "WhatsApp",
@@ -202,7 +202,18 @@ func (w *WhatsAppClient) DownloadMedia(sessionID, chatID, messageID string) (map
 		"chatId":    chatID,
 		"messageId": messageID,
 	}
-	return w.doPost(url, body)
+	resp, err := w.doPost(url, body)
+	if err != nil {
+		return resp, err
+	}
+
+	// wwebjs API may return success:false with HTTP 200
+	if success, ok := resp["success"].(bool); ok && !success {
+		errMsg, _ := resp["message"].(string)
+		return resp, fmt.Errorf("whatsapp download media failed: %s", errMsg)
+	}
+
+	return resp, nil
 }
 
 // doGet performs a GET request with API key.

@@ -7,6 +7,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"mime"
+	"path/filepath"
 	"strings"
 )
 
@@ -382,19 +384,44 @@ func (b *Bridge) HandleWhatsAppMessage(ctx context.Context, sessionID string, fr
 		mediaData, _ := mediaResp["data"].(string)
 		mimetype, _ := mediaResp["mimetype"].(string)
 		filename, _ := mediaResp["filename"].(string)
-		if filename == "" {
-			filename = "attachment"
+
+		// Log the response keys for debugging
+		var respKeys []string
+		for k := range mediaResp {
+			respKeys = append(respKeys, k)
 		}
+		log.Printf("[Bridge] DownloadMedia response keys: %v, data length: %d, mimetype: %s, filename: %s", respKeys, len(mediaData), mimetype, filename)
+
+		if mediaData == "" {
+			log.Printf("[Bridge] Empty media data from WhatsApp API for message %s, full response: %v", messageID, mediaResp)
+			return
+		}
+
 		if mimetype == "" {
 			mimetype = "application/octet-stream"
+		}
+		if filename == "" {
+			filename = inferFilename(mimetype, msgType)
+		} else if filepath.Ext(filename) == "" {
+			// Add extension if filename has none
+			if exts, _ := mime.ExtensionsByType(mimetype); len(exts) > 0 {
+				filename += exts[0]
+			}
 		}
 
 		// Decode base64 data
 		decoded, err := decodeBase64Media(mediaData)
 		if err != nil {
-			log.Printf("[Bridge] Failed to decode media: %v", err)
+			log.Printf("[Bridge] Failed to decode media (data length=%d): %v", len(mediaData), err)
 			return
 		}
+
+		if len(decoded) == 0 {
+			log.Printf("[Bridge] Decoded media is empty for message %s", messageID)
+			return
+		}
+
+		log.Printf("[Bridge] Decoded media: %d bytes, mimetype: %s, filename: %s", len(decoded), mimetype, filename)
 
 		// Determine content to send
 		var content string
@@ -656,12 +683,78 @@ func (b *Bridge) handleNotFoundResource(ctx context.Context, chat *database.Chat
 
 // decodeBase64Media decodes a base64-encoded media string, handling the
 // "data:mimetype;base64," prefix if present.
+// It tries StdEncoding first, then falls back to RawStdEncoding (no padding)
+// to handle both padded and unpadded base64 from wwebjs.
 func decodeBase64Media(data string) ([]byte, error) {
 	rawData := data
-	// Strip data URI prefix if present
+	// Strip data URI prefix if present (e.g., "data:image/jpeg;base64,...")
 	if idx := strings.Index(data, ","); idx != -1 {
 		rawData = data[idx+1:]
 	}
 
-	return base64.StdEncoding.DecodeString(rawData)
+	// Remove any whitespace/newlines that may be present
+	rawData = strings.TrimSpace(rawData)
+
+	if rawData == "" {
+		return nil, fmt.Errorf("empty base64 data after stripping prefix")
+	}
+
+	// Try standard base64 (with padding) first
+	decoded, err := base64.StdEncoding.DecodeString(rawData)
+	if err == nil {
+		return decoded, nil
+	}
+
+	// Fall back to raw standard base64 (without padding)
+	decoded, err2 := base64.RawStdEncoding.DecodeString(rawData)
+	if err2 == nil {
+		return decoded, nil
+	}
+
+	// Try URL-safe base64 variants
+	decoded, err3 := base64.URLEncoding.DecodeString(rawData)
+	if err3 == nil {
+		return decoded, nil
+	}
+
+	decoded, err4 := base64.RawURLEncoding.DecodeString(rawData)
+	if err4 == nil {
+		return decoded, nil
+	}
+
+	return nil, fmt.Errorf("all base64 decode attempts failed: std=%v, rawStd=%v, url=%v, rawUrl=%v", err, err2, err3, err4)
+}
+
+// inferFilename generates a filename with proper extension based on mimetype and message type.
+func inferFilename(mimetype, msgType string) string {
+	base := "attachment"
+	switch msgType {
+	case "image":
+		base = "image"
+	case "video":
+		base = "video"
+	case "ptt":
+		base = "voice"
+	case "sticker":
+		base = "sticker"
+	case "document":
+		base = "document"
+	}
+
+	// Try to get extension from mimetype
+	if exts, _ := mime.ExtensionsByType(mimetype); len(exts) > 0 {
+		return base + exts[0]
+	}
+
+	// Fallback extensions
+	switch {
+	case strings.HasPrefix(mimetype, "image/"):
+		return base + ".jpg"
+	case strings.HasPrefix(mimetype, "video/"):
+		return base + ".mp4"
+	case strings.HasPrefix(mimetype, "audio/"):
+		return base + ".ogg"
+	default:
+		return base + ".bin"
+	}
 }
