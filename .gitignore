@@ -22,6 +22,9 @@ vendor/
 # Session and state directories (dynamic WhatsApp sessions)
 sessions/
 
+# postgresql data
+pgdata/
+
 # IDEs and editors
 .idea/
 .vscode/
