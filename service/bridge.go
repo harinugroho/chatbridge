@@ -380,23 +380,13 @@ func (b *Bridge) HandleWhatsAppMessage(ctx context.Context, sessionID string, fr
 			return
 		}
 
-		// Parse media data
-		mediaData, _ := mediaResp["data"].(string)
-		mimetype, _ := mediaResp["mimetype"].(string)
-		filename, _ := mediaResp["filename"].(string)
-
-		// Log the response keys for debugging
-		var respKeys []string
-		for k := range mediaResp {
-			respKeys = append(respKeys, k)
-		}
-		log.Printf("[Bridge] DownloadMedia response keys: %v, data length: %d, mimetype: %s, filename: %s", respKeys, len(mediaData), mimetype, filename)
-
-		if mediaData == "" {
-			log.Printf("[Bridge] Empty media data from WhatsApp API for message %s, full response: %v", messageID, mediaResp)
+		if len(mediaResp.Data) == 0 {
+			log.Printf("[Bridge] Empty media data from WhatsApp API for message %s", messageID)
 			return
 		}
 
+		mimetype := mediaResp.ContentType
+		filename := mediaResp.Filename
 		if mimetype == "" {
 			mimetype = "application/octet-stream"
 		}
@@ -409,19 +399,7 @@ func (b *Bridge) HandleWhatsAppMessage(ctx context.Context, sessionID string, fr
 			}
 		}
 
-		// Decode base64 data
-		decoded, err := decodeBase64Media(mediaData)
-		if err != nil {
-			log.Printf("[Bridge] Failed to decode media (data length=%d): %v", len(mediaData), err)
-			return
-		}
-
-		if len(decoded) == 0 {
-			log.Printf("[Bridge] Decoded media is empty for message %s", messageID)
-			return
-		}
-
-		log.Printf("[Bridge] Decoded media: %d bytes, mimetype: %s, filename: %s", len(decoded), mimetype, filename)
+		log.Printf("[Bridge] Downloaded media: %d bytes, mimetype: %s, filename: %s", len(mediaResp.Data), mimetype, filename)
 
 		// Determine content to send
 		var content string
@@ -440,7 +418,7 @@ func (b *Bridge) HandleWhatsAppMessage(ctx context.Context, sessionID string, fr
 		resp, err := b.Chatwoot.SendMessageWithAttachment(
 			chat.AccountID, *chat.ConversationID,
 			content, "incoming", false,
-			decoded, filename, mimetype, inReplyTo, botToken,
+			mediaResp.Data, filename, mimetype, inReplyTo, botToken,
 		)
 		if err != nil {
 			log.Printf("[Bridge] Failed to send media to Chatwoot: %v", err)

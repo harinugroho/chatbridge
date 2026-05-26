@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -195,25 +196,97 @@ func (w *WhatsAppClient) GetGroupInfo(sessionID, chatID string) (map[string]inte
 	return w.doPost(url, body)
 }
 
-// DownloadMedia downloads media from a message as base64 data.
-func (w *WhatsAppClient) DownloadMedia(sessionID, chatID, messageID string) (map[string]interface{}, error) {
-	url := fmt.Sprintf("%s/message/downloadMediaAsData/%s", w.BaseURL, sessionID)
-	body := map[string]interface{}{
+// MediaResponse holds the result of a media download.
+type MediaResponse struct {
+	Data        []byte // Raw binary media data
+	ContentType string // MIME type from response header
+	Filename    string // Optional filename
+}
+
+// DownloadMedia downloads media from a message.
+// The wwebjs API returns raw binary data with the appropriate Content-Type header.
+func (w *WhatsAppClient) DownloadMedia(sessionID, chatID, messageID string) (*MediaResponse, error) {
+	reqURL := fmt.Sprintf("%s/message/downloadMediaAsData/%s", w.BaseURL, sessionID)
+	bodyData := map[string]interface{}{
 		"chatId":    chatID,
 		"messageId": messageID,
 	}
-	resp, err := w.doPost(url, body)
+
+	b, err := json.Marshal(bodyData)
 	if err != nil {
-		return resp, err
+		return nil, err
 	}
 
-	// wwebjs API may return success:false with HTTP 200
-	if success, ok := resp["success"].(bool); ok && !success {
-		errMsg, _ := resp["message"].(string)
-		return resp, fmt.Errorf("whatsapp download media failed: %s", errMsg)
+	req, err := http.NewRequest("POST", reqURL, bytes.NewReader(b))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-api-key", w.APIKey)
+
+	resp, err := w.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("whatsapp request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	return resp, nil
+	log.Printf("[WhatsApp] POST %s → %d", reqURL, resp.StatusCode)
+
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("whatsapp returned status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+
+	// If the response is JSON, it may be an error or base64-encoded data
+	if strings.HasPrefix(contentType, "application/json") {
+		var result map[string]interface{}
+		if err := json.Unmarshal(respBody, &result); err != nil {
+			return nil, fmt.Errorf("failed to parse JSON response: %w", err)
+		}
+
+		// Check for API-level failure
+		if success, ok := result["success"].(bool); ok && !success {
+			errMsg, _ := result["message"].(string)
+			return nil, fmt.Errorf("whatsapp download media failed: %s", errMsg)
+		}
+
+		// Handle base64-encoded data in JSON response
+		if dataStr, ok := result["data"].(string); ok && dataStr != "" {
+			mimetype, _ := result["mimetype"].(string)
+			filename, _ := result["filename"].(string)
+			decoded, err := decodeBase64Media(dataStr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode base64 media: %w", err)
+			}
+			if mimetype == "" {
+				mimetype = "application/octet-stream"
+			}
+			return &MediaResponse{
+				Data:        decoded,
+				ContentType: mimetype,
+				Filename:    filename,
+			}, nil
+		}
+
+		return nil, fmt.Errorf("JSON response contained no media data: %v", result)
+	}
+
+	// Binary response — the body IS the media data
+	if len(respBody) == 0 {
+		return nil, fmt.Errorf("empty binary response body")
+	}
+
+	return &MediaResponse{
+		Data:        respBody,
+		ContentType: contentType,
+		Filename:    "",
+	}, nil
 }
 
 // doGet performs a GET request with API key.

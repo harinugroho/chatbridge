@@ -1,5 +1,6 @@
 # Exclude dynamic and environment files from docker build context
 sessions/
+pgdata/
 n8n/
 docker-compose.yml
 docker-compose.*.yml
