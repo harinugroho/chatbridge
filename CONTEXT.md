@@ -24,3 +24,11 @@ _Avoid_: New messages count
 Proses pengambilan dan penerusan pesan masuk yang terlewat selama sesi WhatsApp terputus atau terlogout, yang dipicu otomatis begitu status sesi kembali menjadi Ready.
 _Avoid_: Sinkronisasi riwayat, sinkronisasi penuh, replay
 
+## API Documentation Context
+
+The bridge integrates with the external APIs of both Chatwoot and WhatsApp (via wwebjs). The API specifications and schemas are defined in the following Swagger/OpenAPI files:
+
+- **Chatwoot API Specification**: [chatwoot-swagger.json](file:///home/chatwoot/chatbridge/docs/chatwoot-swagger.json)
+  Defines endpoints for Chatwoot server interactions (e.g., managing contacts, conversations, messages, webhooks).
+- **wwebjs API Specification**: [wwebjs-swagger.json](file:///home/chatwoot/chatbridge/docs/wwebjs-swagger.json)
+  Defines endpoints for WhatsApp Web JS API client wrapper operations (e.g., managing sessions, sending/receiving messages, and client sync state).

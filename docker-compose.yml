@@ -39,6 +39,7 @@ services:
       # - RECOVER_SESSIONS=TRUE # OPTIONAL, SHOULD WE RECOVER THE SESSION IN CASE OF PAGE FAILURES
     volumes:
       - ./sessions:/usr/src/app/sessions
+      - ./patches/chatController.js:/usr/src/app/src/controllers/chatController.js:ro
     depends_on:
       - chatbridge
 
