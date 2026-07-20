@@ -48,6 +48,15 @@ func (c *ChatwootClient) SendMessage(accountID, conversationID int, content, mes
 	return c.doJSON("POST", url, body, botToken)
 }
 
+// UpdateMessageStatus updates the status of a message in Chatwoot.
+func (c *ChatwootClient) UpdateMessageStatus(accountID, conversationID, messageID int, status string, botToken string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("%s/api/v1/accounts/%d/conversations/%d/messages/%d", c.BaseURL, accountID, conversationID, messageID)
+	body := map[string]interface{}{
+		"status": status,
+	}
+	return c.doJSON("PATCH", url, body, botToken)
+}
+
 // SendMessageWithAttachment sends a message with a binary attachment to Chatwoot.
 // The attachment is provided as raw bytes with its filename and content type.
 func (c *ChatwootClient) SendMessageWithAttachment(accountID, conversationID int, content, messageType string, private bool, attachmentData []byte, filename, contentType string, inReplyTo *int, botToken string) (map[string]interface{}, error) {

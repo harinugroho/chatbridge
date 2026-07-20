@@ -65,6 +65,9 @@ func (h *WhatsAppWebhookHandler) process(payload map[string]interface{}) {
 	case "message_create":
 		h.handleMessageCreate(ctx, payload, sessionID)
 
+	case "message_ack":
+		h.handleMessageAck(ctx, payload, sessionID)
+
 	default:
 		log.Printf("[WhatsAppWebhook] Ignoring event: %s", dataType)
 	}
@@ -158,3 +161,48 @@ func (h *WhatsAppWebhookHandler) handleMessageCreate(ctx contextType, payload ma
 		mentionedIDs,
 	)
 }
+
+// handleMessageAck processes message_ack events.
+func (h *WhatsAppWebhookHandler) handleMessageAck(ctx contextType, payload map[string]interface{}, sessionID string) {
+	data, ok := payload["data"].(map[string]interface{})
+	if !ok {
+		log.Printf("[WhatsAppWebhook] No data in message_ack payload")
+		return
+	}
+
+	message, ok := data["message"].(map[string]interface{})
+	if !ok {
+		log.Printf("[WhatsAppWebhook] No message in data")
+		return
+	}
+
+	// Extract _data fields
+	msgData, _ := message["_data"].(map[string]interface{})
+	if msgData == nil {
+		msgData = message // fallback
+	}
+
+	// Extract ID
+	messageID := ""
+	if idData, ok := msgData["id"].(map[string]interface{}); ok {
+		messageID, _ = idData["id"].(string)
+	}
+
+	// Extract ack code
+	ackVal, ok := data["ack"]
+	if !ok {
+		ackVal, ok = msgData["ack"]
+	}
+	if !ok {
+		log.Printf("[WhatsAppWebhook] No ack value found in payload")
+		return
+	}
+
+	ack := toInt(ackVal)
+
+	// Extract chat target (to)
+	to, _ := msgData["to"].(string)
+
+	h.Bridge.HandleWhatsAppMessageAck(ctx, sessionID, messageID, to, ack)
+}
+

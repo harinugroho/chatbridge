@@ -140,6 +140,15 @@ func (w *WhatsAppClient) ClearState(sessionID, chatID string) (map[string]interf
 	return w.doPost(url, body)
 }
 
+// SendSeen marks the chat messages as read (sends seen state) in WhatsApp.
+func (w *WhatsAppClient) SendSeen(sessionID, chatID string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("%s/chat/sendSeen/%s", w.BaseURL, sessionID)
+	body := map[string]interface{}{
+		"chatId": chatID,
+	}
+	return w.doPost(url, body)
+}
+
 // GetProfilePicURL gets the profile picture URL for a contact.
 func (w *WhatsAppClient) GetProfilePicURL(sessionID, contactID string) (string, error) {
 	url := fmt.Sprintf("%s/client/getProfilePicUrl/%s", w.BaseURL, sessionID)

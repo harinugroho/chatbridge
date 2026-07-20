@@ -81,6 +81,14 @@ func (h *ChatwootWebhookHandler) process(payload map[string]interface{}) {
 	if account != nil {
 		accountID = toInt(account["id"])
 	}
+	if accountID == 0 {
+		// Fallback to extract from messages
+		if messages, ok := conversation["messages"].([]interface{}); ok && len(messages) > 0 {
+			if firstMsg, ok := messages[0].(map[string]interface{}); ok {
+				accountID = toInt(firstMsg["account_id"])
+			}
+		}
+	}
 
 	// Build session_id
 	sessionID := ""
@@ -141,7 +149,41 @@ func (h *ChatwootWebhookHandler) process(payload map[string]interface{}) {
 			sessionID, phoneNumber, content, messageType, attachments,
 		)
 
+	case "conversation_updated":
+		h.handleConversationUpdated(ctx, payload, conversationID, sessionID, phoneNumber)
+
 	default:
 		log.Printf("[ChatwootWebhook] Ignoring event: %s", event)
+	}
+}
+
+// handleConversationUpdated processes conversation_updated events.
+func (h *ChatwootWebhookHandler) handleConversationUpdated(ctx contextType, payload map[string]interface{}, conversationID int, sessionID, phoneNumber string) {
+	changedAttrs, ok := payload["changed_attributes"].([]interface{})
+	if !ok {
+		return
+	}
+
+	isRead := false
+	for _, attr := range changedAttrs {
+		attrMap, ok := attr.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if unreadVal, exists := attrMap["unread_count"]; exists {
+			if unreadMap, ok := unreadVal.(map[string]interface{}); ok {
+				currentVal := toInt(unreadMap["current_value"])
+				previousVal := toInt(unreadMap["previous_value"])
+				if currentVal == 0 && previousVal > 0 {
+					isRead = true
+					break
+				}
+			}
+		}
+	}
+
+	if isRead {
+		log.Printf("[ChatwootWebhook] Conversation %d marked as read", conversationID)
+		h.Bridge.HandleChatwootConversationRead(ctx, conversationID, phoneNumber, sessionID)
 	}
 }

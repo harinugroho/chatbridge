@@ -10,24 +10,53 @@ import (
 	"mime"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 )
+
+type PendingMessage struct {
+	ChatwootID int
+	Timestamp  time.Time
+}
 
 // Bridge is the core orchestration service that ties together the database,
 // Chatwoot, and WhatsApp services.
 type Bridge struct {
-	DB       *database.DB
-	Chatwoot *ChatwootClient
-	WhatsApp *WhatsAppClient
-	Config   *config.Config
+	DB          *database.DB
+	Chatwoot    *ChatwootClient
+	WhatsApp    *WhatsAppClient
+	Config      *config.Config
+	pendingMsgs map[string][]PendingMessage
+	pendingMu   sync.Mutex
 }
 
 // NewBridge creates a new Bridge service.
 func NewBridge(db *database.DB, cw *ChatwootClient, wa *WhatsAppClient, cfg *config.Config) *Bridge {
 	return &Bridge{
-		DB:       db,
-		Chatwoot: cw,
-		WhatsApp: wa,
-		Config:   cfg,
+		DB:          db,
+		Chatwoot:    cw,
+		WhatsApp:    wa,
+		Config:      cfg,
+		pendingMsgs: make(map[string][]PendingMessage),
+	}
+}
+
+// cleanupOldPendingMsgs clears entries older than 2 minutes.
+// Must be called while holding pendingMu lock.
+func (b *Bridge) cleanupOldPendingMsgs() {
+	now := time.Now()
+	for key, msgs := range b.pendingMsgs {
+		var active []PendingMessage
+		for _, msg := range msgs {
+			if now.Sub(msg.Timestamp) < 2*time.Minute {
+				active = append(active, msg)
+			}
+		}
+		if len(active) == 0 {
+			delete(b.pendingMsgs, key)
+		} else {
+			b.pendingMsgs[key] = active
+		}
 	}
 }
 
@@ -41,7 +70,13 @@ func (b *Bridge) HandleChatwootTypingOn(ctx context.Context, conversationID int,
 		return // skip admin
 	}
 
-	chat, err := b.DB.GetChatByConversationID(ctx, conversationID, sessionID)
+	var chat *database.Chat
+	var err error
+	if sessionID != "" {
+		chat, err = b.DB.GetChatByConversationID(ctx, conversationID, sessionID)
+	} else {
+		chat, err = b.DB.GetChatByConversationIDOnly(ctx, conversationID)
+	}
 	if err != nil || chat == nil {
 		log.Printf("[Bridge] Chat not found for conversation %d session %s: %v", conversationID, sessionID, err)
 		return
@@ -58,7 +93,13 @@ func (b *Bridge) HandleChatwootTypingOff(ctx context.Context, conversationID int
 		return // skip admin
 	}
 
-	chat, err := b.DB.GetChatByConversationID(ctx, conversationID, sessionID)
+	var chat *database.Chat
+	var err error
+	if sessionID != "" {
+		chat, err = b.DB.GetChatByConversationID(ctx, conversationID, sessionID)
+	} else {
+		chat, err = b.DB.GetChatByConversationIDOnly(ctx, conversationID)
+	}
 	if err != nil || chat == nil {
 		log.Printf("[Bridge] Chat not found for conversation %d session %s: %v", conversationID, sessionID, err)
 		return
@@ -89,29 +130,61 @@ func (b *Bridge) HandleChatwootMessageCreated(ctx context.Context, accountID, in
 		log.Printf("[Bridge] Chat not found for conversation %d session %s: %v", conversationID, sessionID, err)
 		return
 	}
-
 	// Forward text message
 	if message != "" {
+		// Register pending outbox message mapping
+		b.pendingMu.Lock()
+		b.cleanupOldPendingMsgs()
+		key := fmt.Sprintf("%s:%s:%s", chat.SessionID, chat.WhatsAppID, message)
+		b.pendingMsgs[key] = append(b.pendingMsgs[key], PendingMessage{
+			ChatwootID: messageID,
+			Timestamp:  time.Now(),
+		})
+		b.pendingMu.Unlock()
+
 		resp, err := b.WhatsApp.SendMessage(chat.SessionID, chat.WhatsAppID, "string", message)
 		if err != nil {
 			log.Printf("[Bridge] Failed to send message to WhatsApp: %v", err)
+			// Remove on failure
+			b.pendingMu.Lock()
+			msgs := b.pendingMsgs[key]
+			if len(msgs) > 0 {
+				b.pendingMsgs[key] = msgs[:len(msgs)-1]
+			}
+			b.pendingMu.Unlock()
 			return
 		}
 
-		// Save message mapping
+		// Fallback direct save if response contains the message object
 		if msgData, ok := resp["message"].(map[string]interface{}); ok {
-			if data, ok := msgData["_data"].(map[string]interface{}); ok {
-				if id, ok := data["id"].(map[string]interface{}); ok {
-					if waID, ok := id["id"].(string); ok {
-						if err := b.DB.InsertMessage(ctx, messageID, waID); err != nil {
-							log.Printf("[Bridge] Failed to save message mapping: %v", err)
-						}
+			var waID string
+			if idObj, ok := msgData["id"].(map[string]interface{}); ok {
+				waID, _ = idObj["id"].(string)
+			}
+			if waID == "" {
+				if data, ok := msgData["_data"].(map[string]interface{}); ok {
+					if idObj, ok := data["id"].(map[string]interface{}); ok {
+						waID, _ = idObj["id"].(string)
 					}
+				}
+			}
+			if waID != "" {
+				// We got it directly, so we can save it and clean up pending outbox mapping
+				b.pendingMu.Lock()
+				msgs := b.pendingMsgs[key]
+				if len(msgs) > 0 {
+					b.pendingMsgs[key] = msgs[1:]
+				}
+				b.pendingMu.Unlock()
+
+				if err := b.DB.InsertMessage(ctx, messageID, waID); err != nil {
+					log.Printf("[Bridge] Failed to save message mapping directly: %v", err)
+				} else {
+					log.Printf("[Bridge] Successfully saved message mapping directly: Chatwoot message %d -> WA message %s", messageID, waID)
 				}
 			}
 		}
 	}
-
 	// Forward attachments
 	if len(attachments) > 0 {
 		for _, att := range attachments {
@@ -327,11 +400,31 @@ func (b *Bridge) HandleWhatsAppMessage(ctx context.Context, sessionID string, fr
 	if chat == nil || chat.ConversationID == nil || (chat.ConversationID != nil && *chat.ConversationID == 0) {
 		b.handleNewWhatsAppContact(ctx, sessionID, fromMe, from, to, name, message, msgType, caption, messageID, mentionedIDs, chatTarget, chat)
 		return
-	}
-
-	// Skip messages from self
+	}	// Skip messages from self
 	if fromMe {
-		log.Printf("[Bridge] Skipping self-sent message")
+		b.pendingMu.Lock()
+		key := fmt.Sprintf("%s:%s:%s", sessionID, to, message)
+		msgs := b.pendingMsgs[key]
+		if len(msgs) > 0 {
+			// Get the oldest pending message matching this key
+			pending := msgs[0]
+			// Shift slice to remove the resolved one
+			b.pendingMsgs[key] = msgs[1:]
+			if len(b.pendingMsgs[key]) == 0 {
+				delete(b.pendingMsgs, key)
+			}
+			b.pendingMu.Unlock()
+
+			// Save the mapping
+			if err := b.DB.InsertMessage(ctx, pending.ChatwootID, messageID); err != nil {
+				log.Printf("[Bridge] Failed to save message mapping from outbox cache: %v", err)
+			} else {
+				log.Printf("[Bridge] Successfully saved message mapping from outbox cache: Chatwoot message %d -> WA message %s", pending.ChatwootID, messageID)
+			}
+		} else {
+			b.pendingMu.Unlock()
+			log.Printf("[Bridge] Skipping self-sent message (no pending outbox match for key: %s)", key)
+		}
 		return
 	}
 
@@ -735,4 +828,63 @@ func inferFilename(mimetype, msgType string) string {
 	default:
 		return base + ".bin"
 	}
+}
+
+// HandleWhatsAppMessageAck handles message_ack events from WhatsApp.
+func (b *Bridge) HandleWhatsAppMessageAck(ctx context.Context, sessionID, waMessageID, to string, ack int) {
+	// Only care about delivered (2) and read (3) statuses
+	var status string
+	switch ack {
+	case 2:
+		status = "delivered"
+	case 3:
+		status = "read"
+	default:
+		return // ignore other status codes
+	}
+
+	// Lookup message mapping in database
+	msg, err := b.DB.GetMessageByWhatsAppID(ctx, waMessageID)
+	if err != nil || msg == nil {
+		// Log but don't error out — could be a status for an incoming message or unsaved message
+		return
+	}
+
+	// Lookup chat to get AccountID and ConversationID
+	chat, err := b.DB.GetChatByWhatsAppIDAndSession(ctx, to, sessionID)
+	if err != nil || chat == nil || chat.ConversationID == nil {
+		log.Printf("[Bridge] Chat not found for ack mapping target %s session %s", to, sessionID)
+		return
+	}	// Update message status in Chatwoot
+	_, userToken := b.getTokens(ctx, sessionID)
+	if userToken == "" {
+		log.Printf("[Bridge] No user token found for session %s, skipping status update", sessionID)
+		return
+	}
+
+	_, err = b.Chatwoot.UpdateMessageStatus(chat.AccountID, *chat.ConversationID, msg.ChatwootID, status, userToken)
+	if err != nil {
+		log.Printf("[Bridge] Failed to update message status in Chatwoot: %v", err)
+	} else {
+		log.Printf("[Bridge] Updated message %d (WA: %s) status to %s", msg.ChatwootID, waMessageID, status)
+	}
+}
+
+// HandleChatwootConversationRead handles conversation_read events (inferred from unread_count turning 0) from Chatwoot.
+func (b *Bridge) HandleChatwootConversationRead(ctx context.Context, conversationID int, phoneNumber, sessionID string) {
+	// Lookup chat to get SessionID and WhatsAppID
+	chat, err := b.DB.GetChatByConversationID(ctx, conversationID, sessionID)
+	if err != nil || chat == nil {
+		log.Printf("[Bridge] Chat not found for conversation %d session %s: %v", conversationID, sessionID, err)
+		return
+	}
+
+	// Send seen status to WhatsApp
+	resp, err := b.WhatsApp.SendSeen(chat.SessionID, chat.WhatsAppID)
+	if err != nil {
+		log.Printf("[Bridge] Failed to send seen status to WhatsApp for chat %s (session %s): %v", chat.WhatsAppID, chat.SessionID, err)
+		return
+	}
+
+	log.Printf("[Bridge] Successfully sent seen status to WhatsApp for chat %s (session %s): %v", chat.WhatsAppID, chat.SessionID, resp)
 }

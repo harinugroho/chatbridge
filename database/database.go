@@ -225,6 +225,19 @@ func (d *DB) GetChatByConversationID(ctx context.Context, conversationID int, se
 	return c, err
 }
 
+// GetChatByConversationIDOnly retrieves a chat by Chatwoot conversation ID only.
+func (d *DB) GetChatByConversationIDOnly(ctx context.Context, conversationID int) (*Chat, error) {
+	c := &Chat{}
+	err := d.QueryRowContext(ctx,
+		`SELECT id, whatsapp_id, account_id, inbox_id, conversation_id, contact_id, session_id, created_at, updated_at
+		 FROM chats WHERE conversation_id = $1 LIMIT 1`, conversationID,
+	).Scan(&c.ID, &c.WhatsAppID, &c.AccountID, &c.InboxID, &c.ConversationID, &c.ContactID, &c.SessionID, &c.CreatedAt, &c.UpdatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return c, err
+}
+
 
 // GetChatByWhatsAppIDAndSession retrieves a chat by WhatsApp ID and session.
 func (d *DB) GetChatByWhatsAppIDAndSession(ctx context.Context, whatsappID, sessionID string) (*Chat, error) {
