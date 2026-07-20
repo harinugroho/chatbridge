@@ -36,14 +36,14 @@ func NewBridge(db *database.DB, cw *ChatwootClient, wa *WhatsAppClient, cfg *con
 // ============================================================
 
 // HandleChatwootTypingOn handles typing_on events from Chatwoot.
-func (b *Bridge) HandleChatwootTypingOn(ctx context.Context, conversationID int, phoneNumber string) {
+func (b *Bridge) HandleChatwootTypingOn(ctx context.Context, conversationID int, phoneNumber, sessionID string) {
 	if phoneNumber == b.Config.SystemPhoneNumber {
 		return // skip admin
 	}
 
-	chat, err := b.DB.GetChatByConversationID(ctx, conversationID)
+	chat, err := b.DB.GetChatByConversationID(ctx, conversationID, sessionID)
 	if err != nil || chat == nil {
-		log.Printf("[Bridge] Chat not found for conversation %d: %v", conversationID, err)
+		log.Printf("[Bridge] Chat not found for conversation %d session %s: %v", conversationID, sessionID, err)
 		return
 	}
 
@@ -53,14 +53,14 @@ func (b *Bridge) HandleChatwootTypingOn(ctx context.Context, conversationID int,
 }
 
 // HandleChatwootTypingOff handles typing_off events from Chatwoot.
-func (b *Bridge) HandleChatwootTypingOff(ctx context.Context, conversationID int, phoneNumber string) {
+func (b *Bridge) HandleChatwootTypingOff(ctx context.Context, conversationID int, phoneNumber, sessionID string) {
 	if phoneNumber == b.Config.SystemPhoneNumber {
 		return // skip admin
 	}
 
-	chat, err := b.DB.GetChatByConversationID(ctx, conversationID)
+	chat, err := b.DB.GetChatByConversationID(ctx, conversationID, sessionID)
 	if err != nil || chat == nil {
-		log.Printf("[Bridge] Chat not found for conversation %d: %v", conversationID, err)
+		log.Printf("[Bridge] Chat not found for conversation %d session %s: %v", conversationID, sessionID, err)
 		return
 	}
 
@@ -84,9 +84,9 @@ func (b *Bridge) HandleChatwootMessageCreated(ctx context.Context, accountID, in
 	}
 
 	// Regular outgoing message — forward to WhatsApp
-	chat, err := b.DB.GetChatByConversationID(ctx, conversationID)
+	chat, err := b.DB.GetChatByConversationID(ctx, conversationID, sessionID)
 	if err != nil || chat == nil {
-		log.Printf("[Bridge] Chat not found for conversation %d: %v", conversationID, err)
+		log.Printf("[Bridge] Chat not found for conversation %d session %s: %v", conversationID, sessionID, err)
 		return
 	}
 

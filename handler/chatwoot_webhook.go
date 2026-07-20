@@ -90,10 +90,10 @@ func (h *ChatwootWebhookHandler) process(payload map[string]interface{}) {
 
 	switch event {
 	case "conversation_typing_on":
-		h.Bridge.HandleChatwootTypingOn(ctx, conversationID, phoneNumber)
+		h.Bridge.HandleChatwootTypingOn(ctx, conversationID, phoneNumber, sessionID)
 
 	case "conversation_typing_off":
-		h.Bridge.HandleChatwootTypingOff(ctx, conversationID, phoneNumber)
+		h.Bridge.HandleChatwootTypingOff(ctx, conversationID, phoneNumber, sessionID)
 
 	case "message_created":
 		// Extract message details

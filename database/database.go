@@ -210,18 +210,21 @@ func (d *DB) UpsertContact(ctx context.Context, whatsappID, lid, name string) er
 // Chat Queries
 // ============================================================
 
-// GetChatByConversationID retrieves a chat by Chatwoot conversation ID.
-func (d *DB) GetChatByConversationID(ctx context.Context, conversationID int) (*Chat, error) {
+// GetChatByConversationID retrieves a chat by Chatwoot conversation ID and session ID.
+// Both fields are required to avoid cross-account collisions, since conversation IDs
+// are only unique per Chatwoot account, not globally.
+func (d *DB) GetChatByConversationID(ctx context.Context, conversationID int, sessionID string) (*Chat, error) {
 	c := &Chat{}
 	err := d.QueryRowContext(ctx,
 		`SELECT id, whatsapp_id, account_id, inbox_id, conversation_id, contact_id, session_id, created_at, updated_at
-		 FROM chats WHERE conversation_id = $1 LIMIT 1`, conversationID,
+		 FROM chats WHERE conversation_id = $1 AND session_id = $2 LIMIT 1`, conversationID, sessionID,
 	).Scan(&c.ID, &c.WhatsAppID, &c.AccountID, &c.InboxID, &c.ConversationID, &c.ContactID, &c.SessionID, &c.CreatedAt, &c.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	return c, err
 }
+
 
 // GetChatByWhatsAppIDAndSession retrieves a chat by WhatsApp ID and session.
 func (d *DB) GetChatByWhatsAppIDAndSession(ctx context.Context, whatsappID, sessionID string) (*Chat, error) {
