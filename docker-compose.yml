@@ -1,22 +1,4 @@
 services:
-  postgres:
-    container_name: chatbridge_postgres
-    image: postgres:16-alpine
-    restart: always
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    volumes:
-      - ./pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   wwebjs:
     container_name: whatsapp_web_api
     image: avoylenko/wwebjs-api:latest # Pull the image from Docker Hub
@@ -34,14 +16,16 @@ services:
       - ENABLE_SWAGGER_ENDPOINT=${ENABLE_SWAGGER_ENDPOINT} # OPTIONAL, ENABLES THE /api-docs ENDPOINT
       # - RATE_LIMIT_MAX=1000 # OPTIONAL, THE MAXIUM NUMBER OF CONNECTIONS TO ALLOW PER TIME FRAME
       # - RATE_LIMIT_WINDOW_MS=1000 # OPTIONAL, TIME FRAME FOR WHICH REQUESTS ARE CHECKED IN MS
-      - WEB_VERSION=${WEB_VERSION} # OPTIONAL, THE VERSION OF WHATSAPP WEB TO USE
-      - WEB_VERSION_CACHE_TYPE=${WEB_VERSION_CACHE_TYPE} # OPTIONAL, DETERMINES WHERE TO GET THE WHATSAPP WEB VERSION(local, remote or none), DEFAULT 'none'
+      # - WEB_VERSION=${WEB_VERSION} # OPTIONAL, THE VERSION OF WHATSAPP WEB TO USE
+      # - WEB_VERSION_CACHE_TYPE=${WEB_VERSION_CACHE_TYPE} # OPTIONAL, DETERMINES WHERE TO GET THE WHATSAPP WEB VERSION(local, remote or none), DEFAULT 'none'
       # - RECOVER_SESSIONS=TRUE # OPTIONAL, SHOULD WE RECOVER THE SESSION IN CASE OF PAGE FAILURES
     volumes:
       - ./sessions:/usr/src/app/sessions
       - ./patches/chatController.js:/usr/src/app/src/controllers/chatController.js:ro
-    depends_on:
-      - chatbridge
+      - ./patches/clientController.js:/usr/src/app/src/controllers/clientController.js:ro
+    networks:
+      - database-network
+      - proxy
 
   chatbridge:
     container_name: chatbridge_app
@@ -58,6 +42,12 @@ services:
       - WHATSAPP_TOKEN=${WHATSAPP_TOKEN}
       - LISTEN_PORT=${LISTEN_PORT}
       - SYSTEM_PHONE_NUMBER=${SYSTEM_PHONE_NUMBER}
-    depends_on:
-      postgres:
-        condition: service_healthy
+    networks:
+      - database-network
+      - proxy
+
+networks:
+  database-network:
+    external: true
+  proxy:
+    external: true

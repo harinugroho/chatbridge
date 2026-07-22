@@ -22,12 +22,13 @@ type PendingMessage struct {
 // Bridge is the core orchestration service that ties together the database,
 // Chatwoot, and WhatsApp services.
 type Bridge struct {
-	DB          *database.DB
-	Chatwoot    *ChatwootClient
-	WhatsApp    *WhatsAppClient
-	Config      *config.Config
-	pendingMsgs map[string][]PendingMessage
-	pendingMu   sync.Mutex
+	DB           *database.DB
+	Chatwoot     *ChatwootClient
+	WhatsApp     *WhatsAppClient
+	Config       *config.Config
+	pendingMsgs  map[string][]PendingMessage
+	pendingMu    sync.Mutex
+	sessionLocks sync.Map // map[string]*sync.Mutex
 }
 
 // NewBridge creates a new Bridge service.
@@ -40,6 +41,13 @@ func NewBridge(db *database.DB, cw *ChatwootClient, wa *WhatsAppClient, cfg *con
 		pendingMsgs: make(map[string][]PendingMessage),
 	}
 }
+
+// getSessionLock retrieves or creates a Mutex for a specific sessionID.
+func (b *Bridge) getSessionLock(sessionID string) *sync.Mutex {
+	mu, _ := b.sessionLocks.LoadOrStore(sessionID, &sync.Mutex{})
+	return mu.(*sync.Mutex)
+}
+
 
 // cleanupOldPendingMsgs clears entries older than 2 minutes.
 // Must be called while holding pendingMu lock.
@@ -117,6 +125,14 @@ func (b *Bridge) HandleChatwootMessageCreated(ctx context.Context, accountID, in
 		log.Printf("[Bridge] Skipping incoming message %d", messageID)
 		return
 	}
+
+	// Check if this message was already synced from WhatsApp (exists in database)
+	msgMap, err := b.DB.GetMessageByChatwootID(ctx, messageID)
+	if err == nil && msgMap != nil {
+		log.Printf("[Bridge] Message %d already mapped to WhatsApp ID %s, skipping forwarding to avoid loop", messageID, msgMap.WhatsAppID)
+		return
+	}
+
 
 	// Check if this is a system/admin message
 	if phoneNumber == b.Config.SystemPhoneNumber {
@@ -369,8 +385,17 @@ func (b *Bridge) HandleWhatsAppQR(ctx context.Context, sessionID, qrData string)
 	}
 }
 
-// HandleWhatsAppMessage handles message_create events from WhatsApp.
+// HandleWhatsAppMessage handles message_create events from WhatsApp with locking.
 func (b *Bridge) HandleWhatsAppMessage(ctx context.Context, sessionID string, fromMe bool, from, to, name, message, msgType, caption, messageID, replyMessageID string, mentionedIDs []string) {
+	mu := b.getSessionLock(sessionID)
+	mu.Lock()
+	defer mu.Unlock()
+
+	b.processWhatsAppMessage(ctx, sessionID, fromMe, from, to, name, message, msgType, caption, messageID, replyMessageID, mentionedIDs)
+}
+
+// processWhatsAppMessage handles message_create events from WhatsApp.
+func (b *Bridge) processWhatsAppMessage(ctx context.Context, sessionID string, fromMe bool, from, to, name, message, msgType, caption, messageID, replyMessageID string, mentionedIDs []string) {
 	// Skip system/notification and status/broadcast message types
 	if from == "status@broadcast" || to == "status@broadcast" {
 		log.Printf("[Bridge] Ignoring status/broadcast message for session: %s", sessionID)
@@ -381,6 +406,12 @@ func (b *Bridge) HandleWhatsAppMessage(ctx context.Context, sessionID string, fr
 	case "e2e_notification", "gp2", "call_log", "revoked", "chatstate", "status_v3", "notification_template":
 		log.Printf("[Bridge] Ignoring system/notification message type: %s for session: %s", msgType, sessionID)
 		return
+	}
+
+	// Update last active time for the session
+	now := time.Now()
+	if err := b.DB.UpsertSession(ctx, sessionID, map[string]interface{}{"last_active_at": now}); err != nil {
+		log.Printf("[Bridge] Failed to update session last active time: %v", err)
 	}
 
 	// Determine chat target
@@ -887,4 +918,197 @@ func (b *Bridge) HandleChatwootConversationRead(ctx context.Context, conversatio
 	}
 
 	log.Printf("[Bridge] Successfully sent seen status to WhatsApp for chat %s (session %s): %v", chat.WhatsAppID, chat.SessionID, resp)
+}
+
+// SyncSessionHistory runs catch-up sync for the given session.
+func (b *Bridge) SyncSessionHistory(ctx context.Context, sessionID string) {
+	mu := b.getSessionLock(sessionID)
+	mu.Lock()
+	defer mu.Unlock()
+
+	log.Printf("[Bridge] Starting Catch-up Sync for session %s", sessionID)
+
+	session, err := b.DB.GetSessionBySessionID(ctx, sessionID)
+	if err != nil {
+		log.Printf("[Bridge] Failed to retrieve session %s for sync: %v", sessionID, err)
+		return
+	}
+	if session == nil {
+		log.Printf("[Bridge] Session %s not found in DB, skipping sync", sessionID)
+		return
+	}
+
+	// Calculate boundaries
+	now := time.Now()
+	var startTime time.Time
+	if session.LastActiveAt != nil {
+		startTime = *session.LastActiveAt
+	} else {
+		// Fallback to 24 hours ago
+		startTime = now.Add(-24 * time.Hour)
+		log.Printf("[Bridge] LastActiveAt is nil, falling back to 24 hours ago: %v", startTime)
+	}
+
+	// Cap the lookback to a maximum of 7 days
+	sevenDaysAgo := now.Add(-7 * 24 * time.Hour)
+	if startTime.Before(sevenDaysAgo) {
+		startTime = sevenDaysAgo
+		log.Printf("[Bridge] Capping lookback time to 7 days ago: %v", startTime)
+	}
+
+	// Fetch chats
+	resp, err := b.WhatsApp.GetChats(sessionID)
+	if err != nil {
+		log.Printf("[Bridge] Failed to fetch chats from WhatsApp for session %s: %v", sessionID, err)
+		return
+	}
+
+	success, _ := resp["success"].(bool)
+	if !success {
+		log.Printf("[Bridge] GetChats failed for session %s: %v", sessionID, resp["error"])
+		return
+	}
+
+	chatsList, ok := resp["chats"].([]interface{})
+	if !ok {
+		log.Printf("[Bridge] Invalid chats format in response: %v", resp)
+		return
+	}
+
+	log.Printf("[Bridge] Found %d chats to check for session %s", len(chatsList), sessionID)
+
+	for _, cVal := range chatsList {
+		chatMap, ok := cVal.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		// Check timestamp
+		tsFloat, _ := chatMap["timestamp"].(float64)
+		chatTimestamp := time.Unix(int64(tsFloat), 0)
+
+		// Skip if last message is older than startTime
+		if chatTimestamp.Before(startTime) {
+			continue
+		}
+
+		idObj, _ := chatMap["id"].(map[string]interface{})
+		if idObj == nil {
+			continue
+		}
+		chatID, _ := idObj["_serialized"].(string)
+		if chatID == "" {
+			continue
+		}
+
+		log.Printf("[Bridge] Chat %s has activity after %v (last message at %v). Fetching history...", chatID, startTime, chatTimestamp)
+
+		// Fetch messages for this chat
+		msgResp, err := b.WhatsApp.FetchMessages(sessionID, chatID, 100)
+		if err != nil {
+			log.Printf("[Bridge] Failed to fetch messages for chat %s: %v", chatID, err)
+			continue
+		}
+
+		msgSuccess, _ := msgResp["success"].(bool)
+		if !msgSuccess {
+			log.Printf("[Bridge] FetchMessages failed for chat %s: %v", chatID, msgResp["error"])
+			continue
+		}
+
+		messagesList, ok := msgResp["messages"].([]interface{})
+		if !ok {
+			continue
+		}
+
+		for _, mVal := range messagesList {
+			message, ok := mVal.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			// Extract message fields
+			msgData, _ := message["_data"].(map[string]interface{})
+			if msgData == nil {
+				msgData = message // fallback
+			}
+
+			tsVal, _ := msgData["timestamp"].(float64)
+			msgTimestamp := time.Unix(int64(tsVal), 0)
+
+			// Skip if message was sent before start time
+			if msgTimestamp.Before(startTime) {
+				continue
+			}
+
+			// Extract ID
+			messageID := ""
+			fromMe := false
+			if idData, ok := msgData["id"].(map[string]interface{}); ok {
+				fromMe, _ = idData["fromMe"].(bool)
+				messageID, _ = idData["id"].(string)
+			}
+
+			if messageID == "" {
+				continue
+			}
+
+			// Check database for duplicates
+			existing, err := b.DB.GetMessageByWhatsAppID(ctx, messageID)
+			if err == nil && existing != nil {
+				// Already processed, skip
+				continue
+			}
+
+			log.Printf("[Bridge] Syncing missed message %s from chat %s, timestamp: %v", messageID, chatID, msgTimestamp)
+
+			// Extract other fields
+			from, _ := msgData["from"].(string)
+			to, _ := msgData["to"].(string)
+
+			// Ignore status updates
+			isStatus, _ := message["isStatus"].(bool)
+			if !isStatus {
+				isStatus, _ = msgData["isStatus"].(bool)
+			}
+			if isStatus || from == "status@broadcast" || to == "status@broadcast" {
+				continue
+			}
+
+			notifyName, _ := msgData["notifyName"].(string)
+			body, _ := msgData["body"].(string)
+			msgType, _ := msgData["type"].(string)
+			caption, _ := msgData["caption"].(string)
+			quotedStanzaID, _ := msgData["quotedStanzaID"].(string)
+
+			messageContent := body
+			if msgType != "chat" && caption != "" {
+				messageContent = caption
+			}
+
+			var mentionedIDs []string
+			if mids, ok := message["mentionedIds"].([]interface{}); ok {
+				for _, mid := range mids {
+					if s, ok := mid.(string); ok {
+						mentionedIDs = append(mentionedIDs, s)
+					}
+				}
+			}
+
+			// Process the message (without lock)
+			b.processWhatsAppMessage(
+				ctx, sessionID, fromMe,
+				from, to, notifyName, messageContent,
+				msgType, caption, messageID, quotedStanzaID,
+				mentionedIDs,
+			)
+		}
+	}
+
+	// Update last_active_at to current time
+	if err := b.DB.UpsertSession(ctx, sessionID, map[string]interface{}{"last_active_at": now}); err != nil {
+		log.Printf("[Bridge] Failed to update last active timestamp at end of sync: %v", err)
+	}
+
+	log.Printf("[Bridge] Catch-up Sync completed for session %s", sessionID)
 }

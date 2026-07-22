@@ -67,6 +67,7 @@ func (d *DB) migrate() error {
 			is_contact_sync BOOLEAN DEFAULT FALSE,
 			bot_token VARCHAR(255),
 			user_token VARCHAR(255),
+			last_active_at TIMESTAMPTZ,
 			created_at TIMESTAMPTZ DEFAULT NOW(),
 			updated_at TIMESTAMPTZ DEFAULT NOW()
 		)`,
@@ -97,10 +98,15 @@ func (d *DB) migrate() error {
 			created_at TIMESTAMPTZ DEFAULT NOW(),
 			updated_at TIMESTAMPTZ DEFAULT NOW()
 		)`,
+		// Migration queries for existing databases
+		`ALTER TABLE sessions ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ`,
+		// Clean up duplicate messages before creating unique index
+		`DELETE FROM messages a USING messages b WHERE a.id > b.id AND a.whatsapp_id = b.whatsapp_id`,
 		// Indexes for common lookups
 		`CREATE INDEX IF NOT EXISTS idx_chats_conversation_id ON chats(conversation_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_chats_session_whatsapp ON chats(session_id, whatsapp_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_messages_whatsapp_id ON messages(whatsapp_id)`,
+		`DROP INDEX IF EXISTS idx_messages_whatsapp_id`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_whatsapp_id ON messages(whatsapp_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_messages_chatwoot_id ON messages(chatwoot_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_contacts_whatsapp_lid ON contacts(whatsapp_lid)`,
 	}
@@ -121,9 +127,9 @@ func (d *DB) migrate() error {
 func (d *DB) GetSessionBySessionID(ctx context.Context, sessionID string) (*Session, error) {
 	s := &Session{}
 	err := d.QueryRowContext(ctx,
-		`SELECT id, session_id, qr, state, is_contact_sync, bot_token, user_token, created_at, updated_at
+		`SELECT id, session_id, qr, state, is_contact_sync, bot_token, user_token, last_active_at, created_at, updated_at
 		 FROM sessions WHERE session_id = $1`, sessionID,
-	).Scan(&s.ID, &s.SessionID, &s.QR, &s.State, &s.IsContactSync, &s.BotToken, &s.UserToken, &s.CreatedAt, &s.UpdatedAt)
+	).Scan(&s.ID, &s.SessionID, &s.QR, &s.State, &s.IsContactSync, &s.BotToken, &s.UserToken, &s.LastActiveAt, &s.CreatedAt, &s.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -141,13 +147,14 @@ func (d *DB) UpsertSession(ctx context.Context, sessionID string, updates map[st
 	if s == nil {
 		// Insert
 		_, err = d.ExecContext(ctx,
-			`INSERT INTO sessions (session_id, qr, state, bot_token, user_token)
-			 VALUES ($1, $2, $3, $4, $5)`,
+			`INSERT INTO sessions (session_id, qr, state, bot_token, user_token, last_active_at)
+			 VALUES ($1, $2, $3, $4, $5, $6)`,
 			sessionID,
 			updates["qr"],
 			updates["state"],
 			updates["bot_token"],
 			updates["user_token"],
+			updates["last_active_at"],
 		)
 	} else {
 		// Update only provided fields
@@ -168,6 +175,11 @@ func (d *DB) UpsertSession(ctx context.Context, sessionID string, updates map[st
 		}
 		if v, ok := updates["user_token"]; ok {
 			if _, err := d.ExecContext(ctx, `UPDATE sessions SET user_token = $1, updated_at = NOW() WHERE session_id = $2`, v, sessionID); err != nil {
+				return err
+			}
+		}
+		if v, ok := updates["last_active_at"]; ok {
+			if _, err := d.ExecContext(ctx, `UPDATE sessions SET last_active_at = $1, updated_at = NOW() WHERE session_id = $2`, v, sessionID); err != nil {
 				return err
 			}
 		}

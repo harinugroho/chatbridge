@@ -21,8 +21,12 @@ The number of messages in a Chatwoot conversation that have not been read by an 
 _Avoid_: New messages count
 
 **Catch-up Sync**:
-Proses pengambilan dan penerusan pesan masuk yang terlewat selama sesi WhatsApp terputus atau terlogout, yang dipicu otomatis begitu status sesi kembali menjadi Ready.
+Proses pengambilan dan penerusan pesan masuk dan keluar yang terlewat selama sesi WhatsApp terputus atau terlogout, yang dipicu otomatis begitu status sesi kembali menjadi Ready.
 _Avoid_: Sinkronisasi riwayat, sinkronisasi penuh, replay
+
+**Last Active Timestamp**:
+Timestamp waktu terakhir sebuah sesi terdeteksi aktif (memproses pesan atau terhubung), disimpan di kolom `last_active_at` pada tabel `sessions` untuk menentukan batas awal pencarian Catch-up Sync.
+_Avoid_: Last login, disconnection time
 
 ## API Documentation Context
 

@@ -11,6 +11,7 @@ type Session struct {
 	IsContactSync bool       `json:"is_contact_sync"`
 	BotToken      *string    `json:"bot_token"`
 	UserToken     *string    `json:"user_token"`
+	LastActiveAt  *time.Time `json:"last_active_at"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 }

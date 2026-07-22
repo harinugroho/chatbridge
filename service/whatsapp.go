@@ -205,6 +205,25 @@ func (w *WhatsAppClient) GetGroupInfo(sessionID, chatID string) (map[string]inte
 	return w.doPost(url, body)
 }
 
+// GetChats retrieves all current chats for the session.
+func (w *WhatsAppClient) GetChats(sessionID string) (map[string]interface{}, error) {
+	url := fmt.Sprintf("%s/client/getChats/%s", w.BaseURL, sessionID)
+	return w.doGet(url)
+}
+
+// FetchMessages loads messages for a chat with a specific limit.
+func (w *WhatsAppClient) FetchMessages(sessionID, chatID string, limit int) (map[string]interface{}, error) {
+	url := fmt.Sprintf("%s/chat/fetchMessages/%s", w.BaseURL, sessionID)
+	body := map[string]interface{}{
+		"chatId": chatID,
+		"searchOptions": map[string]interface{}{
+			"limit": limit,
+		},
+	}
+	return w.doPost(url, body)
+}
+
+
 // MediaResponse holds the result of a media download.
 type MediaResponse struct {
 	Data        []byte // Raw binary media data

@@ -59,6 +59,9 @@ func (h *WhatsAppWebhookHandler) process(payload map[string]interface{}) {
 	log.Printf("[WhatsAppWebhook] Received event: %s for session: %s", dataType, sessionID)
 
 	switch dataType {
+	case "ready":
+		h.Bridge.SyncSessionHistory(ctx, sessionID)
+
 	case "qr":
 		h.handleQR(ctx, payload, sessionID)
 
